@@ -9,7 +9,8 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const [error, setError] = useState(null);
+  const { isAuthenticated, login } = useAuth();
 
   // If already authenticated, redirect
   useEffect(() => {
@@ -17,6 +18,27 @@ const Login = () => {
       navigate(redirect);
     }
   }, [isAuthenticated, navigate, redirect]);
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const handleCallback = async () => {
+      const sessionId = searchParams.get('session_id');
+      if (sessionId) {
+        setLoading(true);
+        setError(null);
+        try {
+          await login(sessionId);
+          // AuthContext will handle redirect via the isAuthenticated effect above
+        } catch (err) {
+          console.error('Login failed:', err);
+          setError('Error al iniciar sesión. Por favor, intenta de nuevo.');
+          setLoading(false);
+        }
+      }
+    };
+
+    handleCallback();
+  }, [searchParams, login]);
 
   const handleGoogleLogin = () => {
     setLoading(true);
@@ -31,8 +53,8 @@ const Login = () => {
         <div className="text-center mb-8">
           <div className="bg-[#FFE600] rounded-lg p-4 inline-block mb-4">
             <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
-              <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" fill="#3483FA"/>
-              <path d="M20 15L28 20V28L20 33L12 28V20L20 15Z" fill="#FFE600"/>
+              <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" fill="#3483FA" />
+              <path d="M20 15L28 20V28L20 33L12 28V20L20 15Z" fill="#FFE600" />
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -75,7 +97,7 @@ const Login = () => {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Compra simulada</span>
+              <span className="px-2 bg-white text-gray-500">OAuth con Emergent Auth</span>
             </div>
           </div>
 
@@ -84,6 +106,14 @@ const Login = () => {
               <strong>Nota:</strong> Haz clic en "Continuar con Google" para autenticarte con tu cuenta de Google real usando Emergent Auth.
             </p>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">
+                <strong>Error:</strong> {error}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 text-center">

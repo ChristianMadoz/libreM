@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { cartAPI } from '../services/api';
+import { cartAPI, favoritesAPI } from '../services/api';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
@@ -15,16 +15,28 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState({ items: [], total: 0 });
+  const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Load cart when user is authenticated
+  // Load cart and favorites when user is authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadCart();
+      loadFavorites();
     } else {
       setCart({ items: [], total: 0 });
+      setFavorites([]);
     }
   }, [isAuthenticated]);
+
+  const loadFavorites = async () => {
+    try {
+      const data = await cartAPI.getFavorites();
+      setFavorites(data.favorites || []);
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+    }
+  };
 
   const loadCart = async () => {
     try {
@@ -87,8 +99,10 @@ export const CartProvider = ({ children }) => {
 
   const value = {
     cart,
+    favorites,
     loading,
     loadCart,
+    loadFavorites,
     addToCart,
     updateCartItem,
     removeFromCart,

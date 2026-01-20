@@ -275,24 +275,24 @@ async def seed_database():
     client = AsyncIOMotorClient(mongo_url)
     db = client[db_name]
     
-    print("🌱 Starting database seed...")
+    print("Starting database seed...")
     
     # Clear existing data
-    print("🗑️  Clearing existing products and categories...")
+    print("Clearing existing products and categories...")
     await db.products.delete_many({})
     await db.categories.delete_many({})
     
     # Insert categories
-    print("📁 Inserting categories...")
+    print("Inserting categories...")
     await db.categories.insert_many(mock_categories)
-    print(f"✅ Inserted {len(mock_categories)} categories")
+    print(f"Inserted {len(mock_categories)} categories")
     
     # Insert products
-    print("📦 Inserting products...")
+    print("Inserting products...")
     await db.products.insert_many(mock_products)
-    print(f"✅ Inserted {len(mock_products)} products")
+    print(f"Inserted {len(mock_products)} products")
     
-    print("🎉 Database seed completed successfully!")
+    print("Database seed completed successfully!")
     
     client.close()
 

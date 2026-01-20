@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, LogOut } from 'lucide-react';
-import { getMockUser, setMockUser, getMockCart, getMockFavorites } from '../mock';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
@@ -9,9 +10,8 @@ const Header = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const user = getMockUser();
-  const cart = getMockCart();
-  const favorites = getMockFavorites();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { cart, favorites } = useCart();
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -20,14 +20,15 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
-    setMockUser(null);
+  const handleLogout = async () => {
+    await logout();
     setShowUserMenu(false);
     navigate('/');
   };
 
-  const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const favoritesCount = favorites.length;
+
+  const cartItemsCount = cart?.items?.reduce((sum, item) => sum + (item.cart_quantity || 0), 0) || 0;
+  const favoritesCount = favorites?.length || 0;
 
   return (
     <header className="sticky top-0 z-50 bg-[#FFE600] shadow-md">
@@ -38,8 +39,8 @@ const Header = () => {
           <Link to="/" className="flex items-center gap-2">
             <div className="bg-white rounded-lg p-2 shadow-sm">
               <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-                <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" fill="#3483FA"/>
-                <path d="M20 15L28 20V28L20 33L12 28V20L20 15Z" fill="#FFE600"/>
+                <path d="M20 5L35 15V25L20 35L5 25V15L20 5Z" fill="#3483FA" />
+                <path d="M20 15L28 20V28L20 33L12 28V20L20 15Z" fill="#FFE600" />
               </svg>
             </div>
             <div className="flex flex-col">

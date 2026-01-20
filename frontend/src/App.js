@@ -12,24 +12,30 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Login from './pages/Login';
 import { Toaster } from './components/ui/sonner';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/category/:id" element={<Category />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/login" element={<Login />} />
-        </Routes>
-        <Toaster />
+        <AuthProvider>
+          <CartProvider>
+            <Header />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/category/:id" element={<Category />} />
+              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/login" element={<Login />} />
+            </Routes>
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );
