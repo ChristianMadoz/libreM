@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { setMockUser } from '../mock';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 
@@ -9,23 +9,20 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+
+  // If already authenticated, redirect
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirect);
+    }
+  }, [isAuthenticated, navigate, redirect]);
 
   const handleGoogleLogin = () => {
     setLoading(true);
-    
-    // Simulate Google OAuth login
-    setTimeout(() => {
-      const mockUser = {
-        id: Date.now(),
-        name: 'Usuario Demo',
-        email: 'usuario@demo.com',
-        picture: 'https://ui-avatars.com/api/?name=Usuario+Demo&background=3483FA&color=fff'
-      };
-      
-      setMockUser(mockUser);
-      setLoading(false);
-      navigate(redirect);
-    }, 1500);
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    const redirectUrl = window.location.origin;
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   return (
