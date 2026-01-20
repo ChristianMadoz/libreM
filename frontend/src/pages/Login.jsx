@@ -81,7 +81,7 @@ const Login = () => {
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>Nota:</strong> Este es un login simulado. Al hacer clic en "Continuar con Google", se creará una sesión de prueba sin autenticación real.
+              <strong>Nota:</strong> Haz clic en "Continuar con Google" para autenticarte con tu cuenta de Google real usando Emergent Auth.
             </p>
           </div>
         </div>
