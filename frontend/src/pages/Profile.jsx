@@ -6,7 +6,7 @@ import { Card } from '../components/ui/card';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, logout } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -14,6 +14,9 @@ const Profile = () => {
     });
 
     useEffect(() => {
+        // Wait for auth to finish loading before making decisions
+        if (authLoading) return;
+
         if (!isAuthenticated) {
             navigate('/login?redirect=/profile');
             return;
@@ -25,7 +28,7 @@ const Profile = () => {
                 email: user.email || ''
             });
         }
-    }, [isAuthenticated, user, navigate]);
+    }, [isAuthenticated, authLoading, user, navigate]);
 
     const handleLogout = async () => {
         await logout();

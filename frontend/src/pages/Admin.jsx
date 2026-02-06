@@ -7,7 +7,7 @@ import { productsAPI } from '../services/api';
 
 const Admin = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [stats, setStats] = useState({
         totalProducts: 0,
         lowStock: 0,
@@ -18,13 +18,16 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Wait for auth to finish loading before making decisions
+        if (authLoading) return;
+
         if (!isAuthenticated) {
             navigate('/login?redirect=/admin');
             return;
         }
 
         loadDashboardData();
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, authLoading, navigate]);
 
     const loadDashboardData = async () => {
         try {
@@ -46,7 +49,8 @@ const Admin = () => {
         }
     };
 
-    if (!user || loading) {
+    // Show loading only if we're authenticated and loading data
+    if (authLoading || (isAuthenticated && loading)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
