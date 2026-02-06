@@ -11,6 +11,8 @@ import Favorites from './pages/Favorites';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Login from './pages/Login';
+import Profile from './pages/Profile';
+import Admin from './pages/Admin';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -32,6 +34,8 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<Admin />} />
             </Routes>
             <Toaster />
           </CartProvider>
