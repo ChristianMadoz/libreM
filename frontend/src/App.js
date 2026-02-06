@@ -35,6 +35,7 @@ function App() {
               <Route path="/orders" element={<Orders />} />
               <Route path="/login" element={<Login />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/users" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
             </Routes>
             <Toaster />
