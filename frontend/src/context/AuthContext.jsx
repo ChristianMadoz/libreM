@@ -49,6 +49,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const devLogin = async () => {
+    try {
+      const data = await authAPI.devLogin();
+      setUser(data.user);
+      setIsAuthenticated(true);
+      localStorage.setItem('session_token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      return data.user;
+    } catch (error) {
+      console.error('Dev login failed:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -67,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
+    devLogin,
     logout,
     checkAuth,
   };

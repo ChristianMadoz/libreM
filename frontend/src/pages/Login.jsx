@@ -10,7 +10,7 @@ const Login = () => {
   const redirect = searchParams.get('redirect') || '/';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, devLogin } = useAuth();
 
   // If already authenticated, redirect
   useEffect(() => {
@@ -106,6 +106,24 @@ const Login = () => {
             </div>
           </div>
 
+          <Button
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await devLogin();
+                // AuthContext effect will handle redirect
+              } catch (err) {
+                setError('Error en login de desarrollo');
+                setLoading(false);
+              }
+            }}
+            variant="outline"
+            disabled={loading}
+            className="w-full border-dashed border-gray-400 text-gray-600 py-6 text-lg hover:bg-gray-50"
+          >
+            💻 Modo Desarrollador (Local)
+          </Button>
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               <strong>Nota:</strong> Haz clic en "Continuar con Google" para autenticarte con tu cuenta de Google real usando Emergent Auth.
@@ -129,8 +147,8 @@ const Login = () => {
             Volver al inicio
           </button>
         </div>
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 };
 
