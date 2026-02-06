@@ -28,6 +28,19 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
+# Configure CORS BEFORE adding routes (middleware order matters!)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://libre-m.vercel.app"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
@@ -640,18 +653,6 @@ async def get_order(
 
 # Include the router in the main app
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://libre-m.vercel.app"
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
