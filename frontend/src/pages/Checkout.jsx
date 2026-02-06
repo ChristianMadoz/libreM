@@ -44,14 +44,24 @@ const Checkout = () => {
   const shipping = cart.some(item => !item.freeShipping) ? 15.99 : 0;
   const total = subtotal + shipping;
 
+  React.useEffect(() => {
+    if (cart.length === 0) {
+      navigate('/cart');
+    }
+  }, [cart, navigate]);
+  
   if (cart.length === 0) {
-    navigate('/cart');
-    return null;
+      return null;
   }
 
+  React.useEffect(() => {
+    if (!user) {
+      navigate('/login?redirect=/checkout');
+    }
+  }, [user, navigate]);
+
   if (!user) {
-    navigate('/login?redirect=/checkout');
-    return null;
+      return null;
   }
 
   const handleShippingSubmit = (e) => {
