@@ -31,7 +31,7 @@ export const CartProvider = ({ children }) => {
 
   const loadFavorites = async () => {
     try {
-      const data = await cartAPI.getFavorites();
+      const data = await favoritesAPI.getFavorites();
       setFavorites(data.favorites || []);
     } catch (error) {
       console.error('Failed to load favorites:', error);
