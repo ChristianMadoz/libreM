@@ -140,10 +140,17 @@ const Admin = () => {
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestión de Productos</h3>
                         <div className="space-y-2">
-                            <Button className="w-full bg-[#3483FA] hover:bg-[#2968C8]">
+                            <Button
+                                className="w-full bg-[#3483FA] hover:bg-[#2968C8]"
+                                onClick={() => alert('Función de agregar producto en desarrollo')}
+                            >
                                 ➕ Agregar Producto
                             </Button>
-                            <Button variant="outline" className="w-full">
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => navigate('/')}
+                            >
                                 📝 Ver Todos los Productos
                             </Button>
                         </div>
@@ -152,10 +159,17 @@ const Admin = () => {
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Gestión de Pedidos</h3>
                         <div className="space-y-2">
-                            <Button className="w-full bg-green-600 hover:bg-green-700">
+                            <Button
+                                className="w-full bg-green-600 hover:bg-green-700"
+                                onClick={() => navigate('/orders')}
+                            >
                                 📋 Pedidos Pendientes
                             </Button>
-                            <Button variant="outline" className="w-full">
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => navigate('/orders')}
+                            >
                                 ✅ Pedidos Completados
                             </Button>
                         </div>
@@ -164,10 +178,17 @@ const Admin = () => {
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Reportes</h3>
                         <div className="space-y-2">
-                            <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                            <Button
+                                className="w-full bg-purple-600 hover:bg-purple-700"
+                                onClick={() => alert('Función de estadísticas en desarrollo')}
+                            >
                                 📊 Ver Estadísticas
                             </Button>
-                            <Button variant="outline" className="w-full">
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => alert('Función de reportes en desarrollo')}
+                            >
                                 📈 Generar Reporte
                             </Button>
                         </div>
@@ -212,7 +233,11 @@ const Admin = () => {
                                             <td className="py-3 px-4 text-gray-600">{product.category}</td>
                                             <td className="py-3 px-4 font-semibold text-gray-900">${product.price.toLocaleString()}</td>
                                             <td className="py-3 px-4">
-                                                <Button size="sm" variant="outline">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => alert(`Reponer stock de: ${product.name}`)}
+                                                >
                                                     Reponer Stock
                                                 </Button>
                                             </td>
