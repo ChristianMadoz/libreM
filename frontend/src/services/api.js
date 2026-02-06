@@ -49,15 +49,29 @@ export const authAPI = {
     const response = await api.post('/auth/google', { session_id: sessionId });
     return response.data;
   },
-  
+
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
     return response.data;
   },
-  
+
   logout: async () => {
     const response = await api.post('/auth/logout');
     return response.data;
+  },
+
+  devLogin: async () => {
+    // Mock successful login response
+    return {
+      user: {
+        user_id: "dev_user_123",
+        name: "Developer User",
+        email: "dev@example.com",
+        picture: "https://github.com/shadcn.png",
+        favorites: []
+      },
+      token: "mock_dev_token_" + Date.now()
+    };
   },
 };
 
@@ -70,16 +84,16 @@ export const productsAPI = {
     if (filters.minPrice) params.append('min_price', filters.minPrice);
     if (filters.maxPrice) params.append('max_price', filters.maxPrice);
     if (filters.sort) params.append('sort', filters.sort);
-    
+
     const response = await api.get(`/products?${params.toString()}`);
     return response.data.products;
   },
-  
+
   getProduct: async (productId) => {
     const response = await api.get(`/products/${productId}`);
     return response.data.product;
   },
-  
+
   getCategories: async () => {
     const response = await api.get('/categories');
     return response.data.categories;
@@ -92,7 +106,7 @@ export const cartAPI = {
     const response = await api.get('/cart');
     return response.data.cart;
   },
-  
+
   addToCart: async (productId, quantity, color) => {
     const response = await api.post('/cart', {
       product_id: productId,
@@ -101,19 +115,19 @@ export const cartAPI = {
     });
     return response.data.cart;
   },
-  
+
   updateCartItem: async (productId, quantity, color) => {
     const params = color ? `?color=${encodeURIComponent(color)}` : '';
     const response = await api.put(`/cart/${productId}${params}`, { quantity });
     return response.data.cart;
   },
-  
+
   removeFromCart: async (productId, color) => {
     const params = color ? `?color=${encodeURIComponent(color)}` : '';
     const response = await api.delete(`/cart/${productId}${params}`);
     return response.data.cart;
   },
-  
+
   clearCart: async () => {
     const response = await api.delete('/cart');
     return response.data;
@@ -126,12 +140,12 @@ export const favoritesAPI = {
     const response = await api.get('/favorites');
     return response.data;
   },
-  
+
   addFavorite: async (productId) => {
     const response = await api.post(`/favorites/${productId}`);
     return response.data.favorites;
   },
-  
+
   removeFavorite: async (productId) => {
     const response = await api.delete(`/favorites/${productId}`);
     return response.data.favorites;
@@ -147,12 +161,12 @@ export const ordersAPI = {
     });
     return response.data.order;
   },
-  
+
   getOrders: async () => {
     const response = await api.get('/orders');
     return response.data.orders;
   },
-  
+
   getOrder: async (orderId) => {
     const response = await api.get(`/orders/${orderId}`);
     return response.data.order;

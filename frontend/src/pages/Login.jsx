@@ -43,7 +43,12 @@ const Login = () => {
   const handleGoogleLogin = () => {
     setLoading(true);
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin;
+    // We redirect back to /login so this component can process the session_id
+    // We also preserve the final destination (redirect param)
+    const returnUrl = new URL('/login', window.location.origin);
+    returnUrl.searchParams.set('redirect', redirect);
+
+    const redirectUrl = returnUrl.toString();
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
