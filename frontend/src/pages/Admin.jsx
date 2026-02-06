@@ -18,14 +18,21 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log('Admin - Auth state:', { isAuthenticated, authLoading, user: !!user });
+
         // Wait for auth to finish loading before making decisions
-        if (authLoading) return;
+        if (authLoading) {
+            console.log('Admin - Waiting for auth to load...');
+            return;
+        }
 
         if (!isAuthenticated) {
+            console.log('Admin - Not authenticated, redirecting to login');
             navigate('/login?redirect=/admin');
             return;
         }
 
+        console.log('Admin - Authenticated, loading dashboard data');
         loadDashboardData();
     }, [isAuthenticated, authLoading, navigate]);
 
@@ -53,9 +60,19 @@ const Admin = () => {
     if (authLoading || (isAuthenticated && loading)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA] mx-auto mb-4"></div>
+                    <p className="text-gray-600">
+                        {authLoading ? 'Verificando autenticación...' : 'Cargando panel de administración...'}
+                    </p>
+                </div>
             </div>
         );
+    }
+
+    // If not authenticated, don't render anything (we're redirecting)
+    if (!isAuthenticated || !user) {
+        return null;
     }
 
     return (
