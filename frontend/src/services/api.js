@@ -73,6 +73,11 @@ export const authAPI = {
       token: "mock_dev_token_" + Date.now()
     };
   },
+
+  register: async (name, email, password) => {
+    const response = await api.post('/auth/register', { name, email, password });
+    return response.data;
+  },
 };
 
 // Products APIs

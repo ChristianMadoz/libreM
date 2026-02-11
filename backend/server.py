@@ -1,42 +1,33 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, HTTPException, Request, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-import os
-import logging
-from pathlib import Path
-from typing import List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Optional, List
 import uuid
-from datetime import datetime, timezone, timedelta
+import logging
+from auth import get_session_user, exchange_session_id
+from config import settings  # Import centralized configuration
+from fastapi import APIRouter
 
 from models import (
     User, UserSession, Product, Category, Cart, CartItem,
     Order, OrderItem, AddToCartRequest, UpdateCartRequest,
     CreateOrderRequest, ShippingData
 )
-from auth import get_session_user, exchange_session_id
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection - using environment variable from config
+client = AsyncIOMotorClient(settings.MONGODB_URI)
+db = client.get_database()  # Uses database from URI
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(title="LibreM API", version="1.0.0")
 
 # Configure CORS BEFORE adding routes (middleware order matters!)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://libre-m.vercel.app"
-    ],
+    allow_origins=settings.CORS_ORIGINS,  # From config
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -118,21 +109,104 @@ async def google_auth(request: Request, response: Response):
         "created_at": datetime.now(timezone.utc)
     })
     
-    # Set httpOnly cookie
+    # Set secure httponly cookie
     response.set_cookie(
         key="session_token",
         value=session_token,
         httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60  # 7 days
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.SESSION_EXPIRY_DAYS * 24 * 60 * 60
     )
     
-    # Get full user data
-    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    return {
+        "user": {
+            "user_id": user_id,
+            "email": auth_data["email"],
+            "name": auth_data["name"],
+            "picture": auth_data.get("picture"),
+            "favorites": existing_user.get("favorites", []) if existing_user else []
+        },
+        "token": session_token
+    }
+
+@api_router.post("/auth/register")
+async def register(request: Request, response: Response):
+    """
+    Register a new user with email and password
+    """
+    import hashlib
     
-    return {"user": user_doc, "token": session_token}
+    body = await request.json()
+    email = body.get("email")
+    password = body.get("password")
+    name = body.get("name")
+    
+    if not email or not password or not name:
+        raise HTTPException(status_code=400, detail="Email, password, and name are required")
+    
+    # Validate email format
+    import re
+    email_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+    if not re.match(email_pattern, email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    # Check if user already exists
+    existing_user = await db.users.find_one(
+        {"email": email},
+        {"_id": 0}
+    )
+    
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Hash password (simple hash for now - in production use bcrypt)
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    # Create new user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    new_user = {
+        "user_id": user_id,
+        "email": email,
+        "name": name,
+        "password_hash": password_hash,
+        "picture": None,
+        "favorites": [],
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db.users.insert_one(new_user)
+    
+    # Create session
+    session_token = uuid.uuid4().hex
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+    
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    # Set secure httponly cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.SESSION_EXPIRY_DAYS * 24 * 60 * 60
+    )
+    
+    return {
+        "user": {
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+            "picture": None,
+            "favorites": []
+        },
+        "token": session_token
+    }
 
 @api_router.get("/auth/me")
 async def get_current_user(

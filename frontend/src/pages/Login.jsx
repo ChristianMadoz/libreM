@@ -147,6 +147,18 @@ const Login = () => {
             Volver al inicio
           </button>
         </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            ¿No tienes cuenta?{' '}
+            <Link
+              to={`/register${redirect !== '/' ? `?redirect=${redirect}` : ''}`}
+              className="text-[#3483FA] hover:text-[#2968C8] font-medium"
+            >
+              Créate una
+            </Link>
+          </p>
+        </div>
       </Card >
     </div >
   );

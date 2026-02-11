@@ -63,6 +63,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (name, email, password) => {
+    try {
+      const data = await authAPI.register(name, email, password);
+      setUser(data.user);
+      setIsAuthenticated(true);
+      // Store token as fallback
+      localStorage.setItem('session_token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      return data.user;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -81,6 +96,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
+    register,
     devLogin,
     logout,
     checkAuth,

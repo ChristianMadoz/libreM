@@ -31,9 +31,23 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+*.env
 
+# API Keys and Credentials - NEVER COMMIT
 *token.json*
 *credentials.json*
+service-account*.json
+*-key.json
+*.pem
+*.key
+*.crt
+secrets/
+api-keys/
 
 # Logs and debug files
 npm-debug.log*

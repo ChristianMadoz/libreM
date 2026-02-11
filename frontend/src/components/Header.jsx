@@ -116,13 +116,21 @@ const Header = () => {
                   )}
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  className="flex items-center gap-2 text-gray-800 hover:text-gray-600 transition-colors"
-                >
-                  <User className="w-5 h-5" />
-                  <span className="text-sm font-medium">Ingresa</span>
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link
+                    to="/register"
+                    className="text-sm font-medium text-gray-800 hover:text-gray-600 transition-colors"
+                  >
+                    Crear cuenta
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2 text-gray-800 hover:text-gray-600 transition-colors"
+                  >
+                    <User className="w-5 h-5" />
+                    <span className="text-sm font-medium">Ingresa</span>
+                  </Link>
+                </div>
               )}
             </div>
 

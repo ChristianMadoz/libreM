@@ -11,6 +11,7 @@ import Favorites from './pages/Favorites';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import { Toaster } from './components/ui/sonner';
@@ -34,6 +35,7 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />

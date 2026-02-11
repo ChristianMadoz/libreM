@@ -2,7 +2,7 @@ from fastapi import Request, HTTPException, Depends
 from datetime import datetime, timezone
 import httpx
 from motor.motor_asyncio import AsyncIOMotorDatabase
-import os
+from config import settings
 
 async def get_session_user(request: Request, db: AsyncIOMotorDatabase):
     """
