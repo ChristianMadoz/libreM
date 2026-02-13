@@ -1,7 +1,7 @@
 services:
   - name: frontend
     build: echo "Building in start script to ensure persistence"
-    start: npm install --legacy-peer-deps && CI=false npm run build && npx serve -s build -l 3000
+    start: npm install --legacy-peer-deps && CI=false npm run build && npx serve -l 3000
     path: ./frontend
     port: 3000
 
