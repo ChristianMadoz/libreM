@@ -22,8 +22,21 @@ from models import (
     CreateOrderRequest, ShippingData
 )
 
+from fastapi.staticfiles import StaticFiles
+import os
+
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
+
+# Determine paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# Mount static files correctly
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+else:
+    print(f"WARNING: Static directory not found at {STATIC_DIR}")
 
 # Configure CORS BEFORE adding routes (middleware order matters!)
 app.add_middleware(
@@ -34,10 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    if _client:
-        _client.close()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -49,9 +58,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Dependency to get database
-async def get_db() -> AsyncIOMotorDatabase:
-    return db
 
 # ============= AUTH ENDPOINTS =============
 
@@ -734,3 +740,21 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     await engine.dispose()
+
+@app.get("/")
+async def root():
+    """Serve the index.html at root"""
+    index_path = os.path.join(BASE_DIR, "index.html")
+    if os.path.exists(index_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(index_path)
+    return {"message": "API is running. Frontend not found."}
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    """Serve the React app for any unmatched routes"""
+    index_path = os.path.join(BASE_DIR, "index.html")
+    if os.path.exists(index_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(index_path)
+    return {"message": "API is running. Frontend static files not found."}
