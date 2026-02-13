@@ -40,7 +40,7 @@ class Settings:
         SECRET_KEY = "dev_secret_key_change_me" 
     
     # CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://ciyndj73.insforge.site")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://ciyndj73.us-east.insforge.app")
     
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
