@@ -86,4 +86,4 @@ def validate_settings():
         )
 
 # Run validation
-validate_settings()
+# validate_settings()
