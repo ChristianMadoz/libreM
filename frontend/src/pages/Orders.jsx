@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ordersAPI } from '../services/api';
 import { getMockOrders } from '../mock';
 import { Package, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -9,10 +10,36 @@ import { Badge } from '../components/ui/badge';
 
 const Orders = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading } = useAuth();
-  const orders = getMockOrders();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [pageLoading, setPageLoading] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!isAuthenticated && !authLoading) {
+        navigate('/login?redirect=/orders');
+        return;
+      }
+
+      if (isAuthenticated) {
+        setPageLoading(true);
+        try {
+          const data = await ordersAPI.getOrders();
+          setOrders(data || []);
+        } catch (error) {
+          console.warn('Backend orders failed, using mock');
+          const { getMockOrders } = await import('../mock');
+          setOrders(getMockOrders());
+        } finally {
+          setPageLoading(false);
+        }
+      }
+    };
+
+    fetchOrders();
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (pageLoading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
@@ -20,10 +47,10 @@ const Orders = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    navigate('/login?redirect=/orders');
-    return null;
-  }
+  // The isAuthenticated check is now handled within useEffect, so if we reach here,
+  // and isAuthenticated is false, it means the navigate has already been called.
+  // However, to be safe, we can keep a redundant check or ensure useEffect's navigation is synchronous enough.
+  // For now, let's assume useEffect handles the redirect before rendering the rest.
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-AR', {

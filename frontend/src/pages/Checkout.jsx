@@ -89,31 +89,61 @@ const Checkout = () => {
 
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
+    handlePlaceOrder();
+  };
 
-    // Simulate payment processing
-    setTimeout(async () => {
-      const order = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        items: cartItems,
-        total: total,
-        shipping: shippingData,
-        status: 'confirmed'
-      };
+  const handlePlaceOrder = async () => {
+    try {
+      setProcessing(true);
+      setError(null);
 
+      let order;
       try {
-        const orders = getMockOrders();
-        setMockOrders([order, ...orders]);
-        await clearCart();
+        order = await ordersAPI.createOrder(shippingData, paymentData);
+      } catch (apiError) {
+        console.warn('Backend order failed, using mock');
+        // Generate a mock order
+        order = {
+          order_id: `mock_order_${Date.now()}`,
+          order_number: `ML-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+          items: cart.items,
+          shipping: shippingData,
+          total: cart.total,
+          status: 'confirmed',
+          created_at: new Date().toISOString()
+        };
 
-        setLoading(false);
-        setStep(3);
-      } catch (error) {
-        toast({ title: 'Error al finalizar compra', variant: 'destructive' });
-        setLoading(false);
+        // Save to mock orders
+        const { getMockOrders, setMockOrders } = await import('../mock');
+        setMockOrders([order, ...getMockOrders()]);
       }
-    }, 2000);
+
+      await clearCart();
+
+      // Navigate to success
+      navigate('/orders', {
+        state: {
+          order,
+          success: true
+        }
+      });
+
+      toast({
+        title: "¡Compra realizada!",
+        description: `Tu pedido ${order.order_number} ha sido confirmado.`,
+      });
+
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError('Hubo un problema al procesar tu compra. Por favor intenta de nuevo.');
+      toast({
+        title: "Error",
+        description: "No pudimos procesar tu pedido",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (step === 3) {

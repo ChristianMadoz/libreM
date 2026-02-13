@@ -34,12 +34,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (sessionId) => {
+  const login = async (email, password) => {
+    try {
+      const data = await authAPI.login(email, password);
+      setUser(data.user);
+      setIsAuthenticated(true);
+      localStorage.setItem('session_token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      return data.user;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  };
+
+  const loginWithGoogle = async (sessionId) => {
     try {
       const data = await authAPI.googleLogin(sessionId);
       setUser(data.user);
       setIsAuthenticated(true);
-      // Store token as fallback
       localStorage.setItem('session_token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       return data.user;
@@ -51,6 +64,8 @@ export const AuthProvider = ({ children }) => {
 
   const devLogin = async () => {
     try {
+      // For dev login, we still want a "fake" user but it might fail on backend
+      // if the backend expects a real token.
       const data = await authAPI.devLogin();
       setUser(data.user);
       setIsAuthenticated(true);
@@ -96,6 +111,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
+    loginWithGoogle,
     register,
     devLogin,
     logout,
