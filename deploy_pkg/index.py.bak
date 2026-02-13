@@ -23,6 +23,14 @@ db = client.get_database()  # Uses database from URI
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
 
+@app.get("/")
+async def root():
+    return {"message": "Libre Mercado API is running"}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Configure CORS BEFORE adding routes (middleware order matters!)
 app.add_middleware(
     CORSMiddleware,

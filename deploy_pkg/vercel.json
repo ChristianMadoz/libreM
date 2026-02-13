@@ -1,26 +1,14 @@
 {
     "builds": [
         {
-            "src": "api/server.py",
+            "src": "index.py",
             "use": "@vercel/python"
-        },
-        {
-            "src": "static/**",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "index.html",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "favicon.ico",
-            "use": "@vercel/static"
         }
     ],
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "api/server.py"
+            "destination": "index.py"
         },
         {
             "source": "/((?!api|static|favicon.ico|logo.*|manifest.json|asset-manifest.json|robots.txt).*)",
