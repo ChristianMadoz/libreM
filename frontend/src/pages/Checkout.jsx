@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMockCart, setMockCart, getMockOrders, setMockOrders, getMockUser } from '../mock';
+import { useAuth } from '../context/AuthContext';
+import { getMockCart, setMockCart, getMockOrders, setMockOrders } from '../mock';
 import { CreditCard, Truck, MapPin, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -11,7 +12,7 @@ import { useToast } from '../hooks/use-toast';
 const Checkout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const user = getMockUser();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const cart = getMockCart();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,17 @@ const Checkout = () => {
     postalCode: '',
     province: ''
   });
+
+  // Sync shipping data when user is loaded
+  useEffect(() => {
+    if (user) {
+      setShippingData(prev => ({
+        ...prev,
+        fullName: prev.fullName || user.name || '',
+        email: prev.email || user.email || ''
+      }));
+    }
+  }, [user]);
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: '',
@@ -44,19 +56,27 @@ const Checkout = () => {
   const shipping = cart.some(item => !item.freeShipping) ? 15.99 : 0;
   const total = subtotal + shipping;
 
-  React.useEffect(() => {
-    if (cart.length === 0) {
+  useEffect(() => {
+    if (!authLoading && cart.length === 0) {
       navigate('/cart');
     }
-  }, [cart, navigate]);
+  }, [cart, navigate, authLoading]);
 
-  React.useEffect(() => {
-    if (user === null) {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
       navigate('/login?redirect=/checkout');
     }
-  }, [user, navigate]);
+  }, [isAuthenticated, navigate, authLoading]);
 
-  if (cart.length === 0 || user === null) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
+
+  if (cart.length === 0 || !isAuthenticated) {
     return null;
   }
 
