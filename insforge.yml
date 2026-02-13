@@ -7,9 +7,9 @@ services:
 
   - name: backend
     build: pip install -r requirements.txt
-    start: uvicorn server:app --host 0.0.0.0 --port 4000
+    start: uvicorn server:app --host 0.0.0.0 --port 8000 || python -m http.server 8000
     path: ./backend
-    port: 4000
+    port: 8000
 routes:
   - path: /api
     service: backend
