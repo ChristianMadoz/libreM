@@ -93,7 +93,7 @@ def validate_settings():
         # Fallack for local dev if not set
         print("WARNING: DATABASE_URL not found in env, using local default")
         # Usar la cadena completa para que funcione la conexión
-        settings.DATABASE_URL = "postgresql://postgres:eca71ec8ff16ce808ef35cf63598b488@ciyndj73.us-east.database.insforge.app:5432/insforge?sslmode=require"
+        settings.DATABASE_URL = "ciyndj73.us-east.database.insforge.app"
 
 # Run validation
 validate_settings()
