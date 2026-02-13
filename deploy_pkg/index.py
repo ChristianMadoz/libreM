@@ -40,11 +40,11 @@ app = FastAPI(title="LibreM API", version="1.0.0")
 
 @app.get("/")
 async def root():
-    return {"message": "Libre Mercado API is running"}
+    return {"message": "Libre Mercado Unified API is running"}
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc)}
 
 # Configure CORS BEFORE adding routes (middleware order matters!)
 app.add_middleware(
