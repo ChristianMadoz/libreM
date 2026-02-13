@@ -11,7 +11,7 @@ const Cart = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { cart, loading, updateCartItem, removeFromCart } = useCart();
+  const { cart, loading, updateCartItem, removeFromCart, getCartItemsCount } = useCart();
 
   const cartItems = cart?.items || [];
 
@@ -165,7 +165,7 @@ const Cart = () => {
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-gray-700">
-                  <span>Productos ({cart.reduce((sum, item) => sum + item.quantity, 0)})</span>
+                  <span>Productos ({getCartItemsCount()})</span>
                   <span className="font-semibold">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">

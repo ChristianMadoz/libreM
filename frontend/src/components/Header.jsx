@@ -11,7 +11,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const { cart, favorites } = useCart();
+  const { cart, favorites, getCartItemsCount } = useCart();
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -27,7 +27,7 @@ const Header = () => {
   };
 
 
-  const cartItemsCount = cart?.items?.reduce((sum, item) => sum + (item.cart_quantity || 0), 0) || 0;
+  const cartItemsCount = getCartItemsCount();
   const favoritesCount = favorites?.length || 0;
 
   return (
