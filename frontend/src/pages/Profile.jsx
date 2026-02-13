@@ -1,17 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { insforge } from '../lib/insforge';
+import { toast } from 'sonner';
+import { Camera, Loader2 } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout, checkAuth } = useAuth();
     const [editing, setEditing] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [profileData, setProfileData] = useState(null);
+    const fileInputRef = useRef(null);
     const [formData, setFormData] = useState({
         name: '',
         email: ''
     });
+
+    const fetchInsforgeProfile = React.useCallback(async () => {
+        if (!user?.user_id) return;
+
+        const { data, error } = await insforge.database
+            .from('profiles')
+            .select('*')
+            .eq('id', user.user_id)
+            .single();
+
+        if (data) {
+            setProfileData(data);
+        }
+    }, [user?.user_id]);
 
     useEffect(() => {
         // Wait for auth to finish loading before making decisions
@@ -27,8 +47,57 @@ const Profile = () => {
                 name: user.name || '',
                 email: user.email || ''
             });
+            fetchInsforgeProfile();
         }
-    }, [isAuthenticated, authLoading, user, navigate]);
+    }, [isAuthenticated, authLoading, user, navigate, fetchInsforgeProfile]);
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Por favor selecciona una imagen válida');
+            return;
+        }
+
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error('La imagen es muy pesada (máximo 2MB)');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // 1. Upload to InsForge Storage
+            const fileName = `${user.user_id}/${Date.now()}-${file.name}`;
+            const { data: uploadData, error: uploadError } = await insforge.storage
+                .from('profiles')
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            // 2. Update/Insert in profiles table
+            const { error: dbError } = await insforge.database
+                .from('profiles')
+                .upsert({
+                    id: user.user_id,
+                    avatar_url: uploadData.url,
+                    avatar_key: uploadData.key,
+                    updated_at: new Date().toISOString(),
+                });
+
+            if (dbError) throw dbError;
+
+            toast.success('Imagen de perfil actualizada');
+            fetchInsforgeProfile();
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            toast.error('No se pudo subir la imagen');
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleLogout = async () => {
         await logout();
@@ -42,6 +111,8 @@ const Profile = () => {
             </div>
         );
     }
+
+    const currentProfileImage = profileData?.avatar_url || user.picture || 'https://github.com/shadcn.png';
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -62,11 +133,31 @@ const Profile = () => {
                         </div>
 
                         <div className="flex items-center gap-6 mb-6">
-                            <img
-                                src={user.picture || 'https://github.com/shadcn.png'}
-                                alt={user.name}
-                                className="w-24 h-24 rounded-full border-2 border-gray-200"
-                            />
+                            <div className="relative group">
+                                <img
+                                    src={currentProfileImage}
+                                    alt={user.name}
+                                    className="w-24 h-24 rounded-full border-2 border-gray-200 object-cover"
+                                />
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                                >
+                                    {uploading ? (
+                                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                    ) : (
+                                        <Camera className="w-8 h-8 text-white" />
+                                    )}
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageUpload}
+                                    className="hidden"
+                                    accept="image/*"
+                                />
+                            </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-gray-900">{user.name}</h3>
                                 <p className="text-gray-600">{user.email}</p>

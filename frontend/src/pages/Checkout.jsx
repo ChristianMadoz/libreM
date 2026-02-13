@@ -49,19 +49,15 @@ const Checkout = () => {
       navigate('/cart');
     }
   }, [cart, navigate]);
-  
-  if (cart.length === 0) {
-      return null;
-  }
 
   React.useEffect(() => {
-    if (!user) {
+    if (user === null) {
       navigate('/login?redirect=/checkout');
     }
   }, [user, navigate]);
 
-  if (!user) {
-      return null;
+  if (cart.length === 0 || user === null) {
+    return null;
   }
 
   const handleShippingSubmit = (e) => {
@@ -149,23 +145,19 @@ const Checkout = () => {
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 ${
-              step >= 1 ? 'text-[#3483FA]' : 'text-gray-400'
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 1 ? 'bg-[#3483FA] text-white' : 'bg-gray-300'
+            <div className={`flex items-center gap-2 ${step >= 1 ? 'text-[#3483FA]' : 'text-gray-400'
               }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-[#3483FA] text-white' : 'bg-gray-300'
+                }`}>
                 {step > 1 ? <CheckCircle className="w-5 h-5" /> : '1'}
               </div>
               <span className="font-semibold hidden sm:inline">Envío</span>
             </div>
             <div className="w-16 h-0.5 bg-gray-300"></div>
-            <div className={`flex items-center gap-2 ${
-              step >= 2 ? 'text-[#3483FA]' : 'text-gray-400'
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 2 ? 'bg-[#3483FA] text-white' : 'bg-gray-300'
+            <div className={`flex items-center gap-2 ${step >= 2 ? 'text-[#3483FA]' : 'text-gray-400'
               }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-[#3483FA] text-white' : 'bg-gray-300'
+                }`}>
                 2
               </div>
               <span className="font-semibold hidden sm:inline">Pago</span>
@@ -191,7 +183,7 @@ const Checkout = () => {
                         id="fullName"
                         required
                         value={shippingData.fullName}
-                        onChange={(e) => setShippingData({...shippingData, fullName: e.target.value})}
+                        onChange={(e) => setShippingData({ ...shippingData, fullName: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -202,7 +194,7 @@ const Checkout = () => {
                         type="tel"
                         required
                         value={shippingData.phone}
-                        onChange={(e) => setShippingData({...shippingData, phone: e.target.value})}
+                        onChange={(e) => setShippingData({ ...shippingData, phone: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -215,7 +207,7 @@ const Checkout = () => {
                       type="email"
                       required
                       value={shippingData.email}
-                      onChange={(e) => setShippingData({...shippingData, email: e.target.value})}
+                      onChange={(e) => setShippingData({ ...shippingData, email: e.target.value })}
                       className="mt-1"
                     />
                   </div>
@@ -226,7 +218,7 @@ const Checkout = () => {
                       id="address"
                       required
                       value={shippingData.address}
-                      onChange={(e) => setShippingData({...shippingData, address: e.target.value})}
+                      onChange={(e) => setShippingData({ ...shippingData, address: e.target.value })}
                       className="mt-1"
                       placeholder="Calle y número"
                     />
@@ -239,7 +231,7 @@ const Checkout = () => {
                         id="city"
                         required
                         value={shippingData.city}
-                        onChange={(e) => setShippingData({...shippingData, city: e.target.value})}
+                        onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -249,7 +241,7 @@ const Checkout = () => {
                         id="province"
                         required
                         value={shippingData.province}
-                        onChange={(e) => setShippingData({...shippingData, province: e.target.value})}
+                        onChange={(e) => setShippingData({ ...shippingData, province: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -259,7 +251,7 @@ const Checkout = () => {
                         id="postalCode"
                         required
                         value={shippingData.postalCode}
-                        onChange={(e) => setShippingData({...shippingData, postalCode: e.target.value})}
+                        onChange={(e) => setShippingData({ ...shippingData, postalCode: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -290,7 +282,7 @@ const Checkout = () => {
                       required
                       placeholder="1234 5678 9012 3456"
                       value={paymentData.cardNumber}
-                      onChange={(e) => setPaymentData({...paymentData, cardNumber: e.target.value})}
+                      onChange={(e) => setPaymentData({ ...paymentData, cardNumber: e.target.value })}
                       maxLength={19}
                       className="mt-1"
                     />
@@ -302,7 +294,7 @@ const Checkout = () => {
                       id="cardName"
                       required
                       value={paymentData.cardName}
-                      onChange={(e) => setPaymentData({...paymentData, cardName: e.target.value})}
+                      onChange={(e) => setPaymentData({ ...paymentData, cardName: e.target.value })}
                       className="mt-1"
                     />
                   </div>
@@ -315,7 +307,7 @@ const Checkout = () => {
                         required
                         placeholder="MM/AA"
                         value={paymentData.expiryDate}
-                        onChange={(e) => setPaymentData({...paymentData, expiryDate: e.target.value})}
+                        onChange={(e) => setPaymentData({ ...paymentData, expiryDate: e.target.value })}
                         maxLength={5}
                         className="mt-1"
                       />
@@ -327,7 +319,7 @@ const Checkout = () => {
                         required
                         placeholder="123"
                         value={paymentData.cvv}
-                        onChange={(e) => setPaymentData({...paymentData, cvv: e.target.value})}
+                        onChange={(e) => setPaymentData({ ...paymentData, cvv: e.target.value })}
                         maxLength={4}
                         className="mt-1"
                       />

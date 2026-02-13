@@ -17,26 +17,7 @@ const Admin = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        console.log('Admin - Auth state:', { isAuthenticated, authLoading, user: !!user });
-
-        // Wait for auth to finish loading before making decisions
-        if (authLoading) {
-            console.log('Admin - Waiting for auth to load...');
-            return;
-        }
-
-        if (!isAuthenticated) {
-            console.log('Admin - Not authenticated, redirecting to login');
-            navigate('/login?redirect=/admin');
-            return;
-        }
-
-        console.log('Admin - Authenticated, loading dashboard data');
-        loadDashboardData();
-    }, [isAuthenticated, authLoading, navigate]);
-
-    const loadDashboardData = async () => {
+    const loadDashboardData = React.useCallback(async () => {
         try {
             const productsData = await productsAPI.getProducts();
             setProducts(productsData);
@@ -54,7 +35,26 @@ const Admin = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        console.log('Admin - Auth state:', { isAuthenticated, authLoading, user: !!user });
+
+        // Wait for auth to finish loading before making decisions
+        if (authLoading) {
+            console.log('Admin - Waiting for auth to load...');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            console.log('Admin - Not authenticated, redirecting to login');
+            navigate('/login?redirect=/admin');
+            return;
+        }
+
+        console.log('Admin - Authenticated, loading dashboard data');
+        loadDashboardData();
+    }, [isAuthenticated, authLoading, user, navigate, loadDashboardData]);
 
     // Show loading only if we're authenticated and loading data
     if (authLoading || (isAuthenticated && loading)) {
