@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { getMockCart, setMockCart, getMockOrders, setMockOrders } from '../mock';
 import { CreditCard, Truck, MapPin, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -50,7 +51,7 @@ const Checkout = () => {
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'USD'
+      currency: '$'
     }).format(price);
   };
 
