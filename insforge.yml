@@ -6,8 +6,8 @@ services:
     port: 3000
 
   - name: backend
-    build: npm install
-    start: node server.js
+    build: pip install -r requirements.txt
+    start: uvicorn server:app --host 0.0.0.0 --port 4000
     path: ./backend
     port: 4000
 routes:
