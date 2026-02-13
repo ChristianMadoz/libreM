@@ -7,9 +7,9 @@ services:
 
   - name: backend
     build: echo "Skipping pip install for connectivity test"
-    start: python -m http.server 8000
+    start: python3 -m http.server 8080
     path: ./backend
-    port: 8000
+    port: 8080
 routes:
   - path: /api
     service: backend
