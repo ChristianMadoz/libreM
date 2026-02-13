@@ -750,6 +750,22 @@ async def root():
         return FileResponse(index_path)
     return {"message": "API is running. Frontend not found."}
 
+@app.get("/favicon.ico")
+async def favicon():
+    file_path = os.path.join(BASE_DIR, "favicon.ico")
+    if os.path.exists(file_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(file_path)
+    return Response(status_code=404)
+
+@app.get("/asset-manifest.json")
+async def manifest():
+    file_path = os.path.join(BASE_DIR, "asset-manifest.json")
+    if os.path.exists(file_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(file_path)
+    return Response(status_code=404)
+
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     """Serve the React app for any unmatched routes"""
