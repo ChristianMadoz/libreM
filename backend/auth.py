@@ -1,10 +1,11 @@
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException
 from datetime import datetime, timezone
 import httpx
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from sqlalchemy.orm import Session
 from config import settings
+import db_models
 
-async def get_session_user(request: Request, db: AsyncIOMotorDatabase):
+async def get_session_user(request: Request, db: Session):
     """
     Authenticator helper - checks session_token from cookies first,
     then Authorization header as fallback.
@@ -23,36 +24,42 @@ async def get_session_user(request: Request, db: AsyncIOMotorDatabase):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     # Find session in database
-    session_doc = await db.user_sessions.find_one(
-        {"session_token": session_token},
-        {"_id": 0}
-    )
+    session = db.query(db_models.UserSession).filter(
+        db_models.UserSession.session_token == session_token
+    ).first()
     
-    if not session_doc:
+    if not session:
         raise HTTPException(status_code=401, detail="Invalid session")
     
     # Check if session is expired
-    expires_at = session_doc["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
+    expires_at = session.expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     
     if expires_at < datetime.now(timezone.utc):
         # Delete expired session
-        await db.user_sessions.delete_one({"session_token": session_token})
+        db.delete(session)
+        db.commit()
         raise HTTPException(status_code=401, detail="Session expired")
     
     # Get user data
-    user_doc = await db.users.find_one(
-        {"user_id": session_doc["user_id"]},
-        {"_id": 0}
-    )
+    user = db.query(db_models.User).filter(
+        db_models.User.user_id == session.user_id
+    ).first()
     
-    if not user_doc:
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return user_doc
+    # Return user data as dict
+    return {
+        "user_id": user.user_id,
+        "email": user.email,
+        "name": user.name,
+        "picture": user.picture,
+        "favorites": user.favorites or [],
+        "google_id": user.google_id,
+        "created_at": user.created_at
+    }
 
 async def exchange_session_id(session_id: str) -> dict:
     """
