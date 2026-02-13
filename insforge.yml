@@ -6,8 +6,8 @@ services:
     port: 3000
 
   - name: backend
-    build: pip install -r requirements.txt
-    start: uvicorn server:app --host 0.0.0.0 --port 8000 || python -m http.server 8000
+    build: echo "Skipping pip install for connectivity test"
+    start: python -m http.server 8000
     path: ./backend
     port: 8000
 routes:
