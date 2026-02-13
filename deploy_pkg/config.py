@@ -7,10 +7,13 @@ from dotenv import load_dotenv
 from typing import List
 
 # Load environment variables from .env file
-# Try several locations to find the .env file
-env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
+# Try current directory first (for deployment), then backend (for development)
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if not os.path.exists(env_path):
+    env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
+
+print(f"DEBUG: Attempting to load .env from: {env_path}")
 load_dotenv(env_path)
-print(f"DEBUG: Loading .env from: {env_path}")
 
 class Settings:
     """
@@ -36,7 +39,7 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "default-secret-key-change-me")
     
     # CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://libre-m.vercel.app")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://ciyndj73.us-east.insforge.app/")
     
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
