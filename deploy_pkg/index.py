@@ -38,6 +38,25 @@ app = FastAPI(title="LibreM API", version="1.0.0")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+# Debug helper
+@app.get("/api/debug")
+async def debug_paths():
+    """Debug endpoint to check file paths"""
+    static_content = []
+    if os.path.exists(STATIC_DIR):
+        for root, dirs, files in os.walk(STATIC_DIR):
+            for file in files:
+                static_content.append(os.path.join(root, file))
+    
+    return {
+        "cwd": os.getcwd(),
+        "base_dir": BASE_DIR,
+        "static_dir": STATIC_DIR,
+        "static_exists": os.path.exists(STATIC_DIR),
+        "static_files": static_content[:10], # First 10 files
+        "index_exists": os.path.exists(os.path.join(BASE_DIR, "index.html"))
+    }
+
 # Mount static files correctly
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
