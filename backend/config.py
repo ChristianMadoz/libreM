@@ -67,7 +67,7 @@ class Settings:
              
         # Add current InsForge domain if available
         # You might need to add specific insforge domains here if they change dynamically
-        origins.append("https://ciyndj73.insforge.site") 
+        origins.append("https://ciyndj73.us-east.insforge.app") 
         
         return list(set(origins)) # Remove duplicates
 
