@@ -23,12 +23,20 @@ def get_motor_client():
     global _client
     if _client is None:
         if not settings.MONGODB_URI:
-            logger.error("MONGODB_URI is not set!")
             return None
         _client = AsyncIOMotorClient(settings.MONGODB_URI)
     return _client
 
-# Dependency to get database
+class DBProxy:
+    def __getattr__(self, name):
+        client = get_motor_client()
+        if client is None:
+            raise RuntimeError("Database not configured")
+        return client.get_database()[name]
+
+db = DBProxy()
+
+# Dependency to get database - for routes that already use Depends
 async def get_db() -> AsyncIOMotorDatabase:
     client = get_motor_client()
     if client is None:
@@ -38,14 +46,6 @@ async def get_db() -> AsyncIOMotorDatabase:
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
 
-@app.get("/")
-async def root():
-    return {"message": "Libre Mercado Unified API is running"}
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok", "timestamp": datetime.now(timezone.utc)}
-
 # Configure CORS BEFORE adding routes (middleware order matters!)
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +54,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    if _client:
+        _client.close()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
