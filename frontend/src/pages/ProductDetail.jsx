@@ -54,11 +54,6 @@ const ProductDetail = () => {
   };
 
   const addToCart = async () => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/product/' + id);
-      return;
-    }
-
     setIsAdding(true);
     try {
       await addToCartContext(product.id, quantity, selectedColor);
@@ -78,10 +73,6 @@ const ProductDetail = () => {
   };
 
   const buyNow = async () => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/product/' + id);
-      return;
-    }
     await addToCart();
     navigate('/cart');
   };
@@ -140,8 +131,8 @@ const ProductDetail = () => {
                         <svg
                           key={i}
                           className={`w-5 h-5 ${i < Math.floor(product.rating)
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-gray-300'
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-gray-300'
                             }`}
                           viewBox="0 0 20 20"
                         >
@@ -230,8 +221,8 @@ const ProductDetail = () => {
                         key={color}
                         onClick={() => setSelectedColor(color)}
                         className={`px-4 py-2 border rounded-lg text-sm transition-all ${selectedColor === color
-                            ? 'border-[#3483FA] bg-blue-50 text-[#3483FA] font-semibold'
-                            : 'border-gray-300 hover:border-gray-400'
+                          ? 'border-[#3483FA] bg-blue-50 text-[#3483FA] font-semibold'
+                          : 'border-gray-300 hover:border-gray-400'
                           }`}
                       >
                         {color}
