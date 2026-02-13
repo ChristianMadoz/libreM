@@ -1,13 +1,19 @@
 from fastapi import FastAPI, HTTPException, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import uuid
 import logging
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, insert
+from database import get_db, engine
+from db_models import (
+    DbUser, DbUserSession, DbProduct, DbCategory, 
+    DbCart, DbCartItem, DbOrder, DbOrderItem
+)
 from auth import get_session_user, exchange_session_id
-from config import settings  # Import centralized configuration
+from config import settings
 from fastapi import APIRouter
 
 from models import (
@@ -15,33 +21,6 @@ from models import (
     Order, OrderItem, AddToCartRequest, UpdateCartRequest,
     CreateOrderRequest, ShippingData
 )
-
-# MongoDB connection - lazily initialized
-_client = None
-
-def get_motor_client():
-    global _client
-    if _client is None:
-        if not settings.MONGODB_URI:
-            return None
-        _client = AsyncIOMotorClient(settings.MONGODB_URI)
-    return _client
-
-class DBProxy:
-    def __getattr__(self, name):
-        client = get_motor_client()
-        if client is None:
-            raise RuntimeError("Database not configured")
-        return client.get_database()[name]
-
-db = DBProxy()
-
-# Dependency to get database - for routes that already use Depends
-async def get_db() -> AsyncIOMotorDatabase:
-    client = get_motor_client()
-    if client is None:
-        raise HTTPException(status_code=500, detail="Database configuration missing")
-    return client.get_database()
 
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
@@ -77,10 +56,13 @@ async def get_db() -> AsyncIOMotorDatabase:
 # ============= AUTH ENDPOINTS =============
 
 @api_router.post("/auth/google")
-async def google_auth(request: Request, response: Response):
+async def google_auth(
+    request: Request, 
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Exchange session_id from Google OAuth for user data and session_token
-    REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     """
     body = await request.json()
     session_id = body.get("session_id")
@@ -92,50 +74,44 @@ async def google_auth(request: Request, response: Response):
     auth_data = await exchange_session_id(session_id)
     
     # Check if user exists
-    existing_user = await db.users.find_one(
-        {"email": auth_data["email"]},
-        {"_id": 0}
-    )
+    result = await db.execute(select(DbUser).where(DbUser.email == auth_data["email"]))
+    user_obj = result.scalar_one_or_none()
     
-    if existing_user:
-        user_id = existing_user["user_id"]
-        # Update user data if changed
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "name": auth_data["name"],
-                "picture": auth_data.get("picture"),
-                "google_id": auth_data["id"]
-            }}
-        )
+    if user_obj:
+        user_id = user_obj.user_id
+        # Update user data
+        user_obj.name = auth_data["name"]
+        user_obj.picture = auth_data.get("picture")
+        user_obj.google_id = auth_data["id"]
     else:
-        # Create new user with custom user_id
+        # Create new user
         user_id = f"user_{uuid.uuid4().hex[:12]}"
-        new_user = {
-            "user_id": user_id,
-            "google_id": auth_data["id"],
-            "email": auth_data["email"],
-            "name": auth_data["name"],
-            "picture": auth_data.get("picture"),
-            "favorites": [],
-            "created_at": datetime.now(timezone.utc)
-        }
-        await db.users.insert_one(new_user)
+        user_obj = DbUser(
+            user_id=user_id,
+            google_id=auth_data["id"],
+            email=auth_data["email"],
+            name=auth_data["name"],
+            picture=auth_data.get("picture"),
+            favorites=[]
+        )
+        db.add(user_obj)
     
-    # Store session in database (timezone-aware, 7 days expiry)
+    # Create or update session
     session_token = auth_data["session_token"]
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     
     # Delete old sessions for this user
-    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.execute(delete(DbUserSession).where(DbUserSession.user_id == user_id))
     
     # Create new session
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
-    })
+    new_session = DbUserSession(
+        user_id=user_id,
+        session_token=session_token,
+        expires_at=expires_at
+    )
+    db.add(new_session)
+    
+    await db.commit()
     
     # Set secure httponly cookie
     response.set_cookie(
@@ -153,13 +129,17 @@ async def google_auth(request: Request, response: Response):
             "email": auth_data["email"],
             "name": auth_data["name"],
             "picture": auth_data.get("picture"),
-            "favorites": existing_user.get("favorites", []) if existing_user else []
+            "favorites": user_obj.favorites if user_obj else []
         },
         "token": session_token
     }
 
 @api_router.post("/auth/register")
-async def register(request: Request, response: Response):
+async def register(
+    request: Request, 
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Register a new user with email and password
     """
@@ -180,40 +160,36 @@ async def register(request: Request, response: Response):
         raise HTTPException(status_code=400, detail="Invalid email format")
     
     # Check if user already exists
-    existing_user = await db.users.find_one(
-        {"email": email},
-        {"_id": 0}
-    )
-    
-    if existing_user:
+    result = await db.execute(select(DbUser).where(DbUser.email == email))
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Hash password (simple hash for now - in production use bcrypt)
+    # Hash password
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
     # Create new user
     user_id = f"user_{uuid.uuid4().hex[:12]}"
-    new_user = {
-        "user_id": user_id,
-        "email": email,
-        "name": name,
-        "password_hash": password_hash,
-        "picture": None,
-        "favorites": [],
-        "created_at": datetime.now(timezone.utc)
-    }
-    await db.users.insert_one(new_user)
+    new_user = DbUser(
+        user_id=user_id,
+        email=email,
+        name=name,
+        password_hash=password_hash,
+        favorites=[]
+    )
+    db.add(new_user)
     
     # Create session
     session_token = uuid.uuid4().hex
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
     
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
-    })
+    new_session = DbUserSession(
+        user_id=user_id,
+        session_token=session_token,
+        expires_at=expires_at
+    )
+    db.add(new_session)
+    
+    await db.commit()
     
     # Set secure httponly cookie
     response.set_cookie(
@@ -239,7 +215,7 @@ async def register(request: Request, response: Response):
 @api_router.get("/auth/me")
 async def get_current_user(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get current authenticated user
@@ -251,7 +227,7 @@ async def get_current_user(
 async def logout(
     request: Request,
     response: Response,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Logout user by deleting session
@@ -259,7 +235,8 @@ async def logout(
     session_token = request.cookies.get("session_token")
     
     if session_token:
-        await db.user_sessions.delete_many({"session_token": session_token})
+        await db.execute(delete(DbUserSession).where(DbUserSession.session_token == session_token))
+        await db.commit()
         response.delete_cookie(key="session_token", path="/")
     
     return {"success": True}
@@ -268,6 +245,7 @@ async def logout(
 
 @api_router.get("/products")
 async def get_products(
+    db: AsyncSession = Depends(get_db),
     category: Optional[int] = None,
     search: Optional[str] = None,
     min_price: Optional[float] = None,
@@ -277,57 +255,67 @@ async def get_products(
     """
     Get all products with optional filters
     """
-    query = {}
+    stmt = select(DbProduct)
     
     if category:
-        query["category_id"] = category
+        stmt = stmt.where(DbProduct.category_id == category)
     
     if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}},
-            {"category": {"$regex": search, "$options": "i"}}
-        ]
+        search_filter = f"%{search}%"
+        stmt = stmt.where(
+            (DbProduct.name.ilike(search_filter)) |
+            (DbProduct.description.ilike(search_filter)) |
+            (DbProduct.category.ilike(search_filter))
+        )
     
-    if min_price is not None or max_price is not None:
-        query["price"] = {}
-        if min_price is not None:
-            query["price"]["$gte"] = min_price
-        if max_price is not None:
-            query["price"]["$lte"] = max_price
+    if min_price is not None:
+        stmt = stmt.where(DbProduct.price >= min_price)
+    if max_price is not None:
+        stmt = stmt.where(DbProduct.price <= max_price)
     
-    products = await db.products.find(query, {"_id": 0}).to_list(1000)
-    
-    # Sort products
+    # Sorting
     if sort == "price-asc":
-        products.sort(key=lambda x: x["price"])
+        stmt = stmt.order_by(DbProduct.price.asc())
     elif sort == "price-desc":
-        products.sort(key=lambda x: x["price"], reverse=True)
+        stmt = stmt.order_by(DbProduct.price.desc())
     elif sort == "rating":
-        products.sort(key=lambda x: x.get("rating", 0), reverse=True)
+        stmt = stmt.order_by(DbProduct.rating.desc().nulls_last())
     elif sort == "discount":
-        products.sort(key=lambda x: x.get("discount", 0), reverse=True)
+        stmt = stmt.order_by(DbProduct.discount.desc())
+    
+    result = await db.execute(stmt)
+    products_objs = result.scalars().all()
+    
+    # Convert to dictionaries
+    products = []
+    for p in products_objs:
+        p_dict = {c.name: getattr(p, c.name) for c in p.__table__.columns}
+        products.append(p_dict)
     
     return {"products": products}
 
 @api_router.get("/products/{product_id}")
-async def get_product(product_id: str):
+async def get_product(product_id: str, db: AsyncSession = Depends(get_db)):
     """
     Get product by ID
     """
-    product = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    result = await db.execute(select(DbProduct).where(DbProduct.product_id == product_id))
+    product_obj = result.scalar_one_or_none()
     
-    if not product:
+    if not product_obj:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    return {"product": product}
+    product_dict = {c.name: getattr(product_obj, c.name) for c in product_obj.__table__.columns}
+    return {"product": product_dict}
 
 @api_router.get("/categories")
-async def get_categories():
+async def get_categories(db: AsyncSession = Depends(get_db)):
     """
     Get all categories
     """
-    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
+    result = await db.execute(select(DbCategory))
+    categories_objs = result.scalars().all()
+    categories = [{c.name: getattr(cat, c.name) for c in cat.__table__.columns} for cat in categories_objs]
     return {"categories": categories}
 
 # ============= CART ENDPOINTS =============
@@ -335,37 +323,39 @@ async def get_categories():
 @api_router.get("/cart")
 async def get_cart(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get user's cart
     """
     user = await get_session_user(request, db)
     
-    cart = await db.carts.find_one(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
+    # Get cart with items and product details
+    result = await db.execute(
+        select(DbCartItem)
+        .where(DbCartItem.user_id == user["user_id"])
     )
+    cart_items = result.scalars().all()
     
-    if not cart:
+    if not cart_items:
         return {"cart": {"items": [], "total": 0}}
     
-    # Get product details for each item
     items_with_details = []
     total = 0
     
-    for item in cart.get("items", []):
-        product = await db.products.find_one(
-            {"product_id": item["product_id"]},
-            {"_id": 0}
-        )
+    for item in cart_items:
+        # Get product details
+        res = await db.execute(select(DbProduct).where(DbProduct.product_id == item.product_id))
+        product = res.scalar_one_or_none()
+        
         if product:
-            item_total = product["price"] * item["quantity"]
+            product_dict = {c.name: getattr(product, c.name) for c in product.__table__.columns}
+            item_total = product.price * item.quantity
             total += item_total
             items_with_details.append({
-                **product,
-                "cart_quantity": item["quantity"],
-                "cart_color": item.get("color"),
+                **product_dict,
+                "cart_quantity": item.quantity,
+                "cart_color": item.color,
                 "item_total": item_total
             })
     
@@ -380,7 +370,7 @@ async def get_cart(
 async def add_to_cart(
     cart_item: AddToCartRequest,
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Add product to cart
@@ -388,62 +378,48 @@ async def add_to_cart(
     user = await get_session_user(request, db)
     
     # Check if product exists and has stock
-    product = await db.products.find_one(
-        {"product_id": cart_item.product_id},
-        {"_id": 0}
-    )
+    res = await db.execute(select(DbProduct).where(DbProduct.product_id == cart_item.product_id))
+    product = res.scalar_one_or_none()
     
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    if product["stock"] < cart_item.quantity:
+    if product.stock < cart_item.quantity:
         raise HTTPException(status_code=400, detail="Insufficient stock")
     
-    # Get or create cart
-    cart = await db.carts.find_one(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
-    )
-    
+    # Ensure cart exists for user
+    res = await db.execute(select(DbCart).where(DbCart.user_id == user["user_id"]))
+    cart = res.scalar_one_or_none()
     if not cart:
-        cart = {
-            "user_id": user["user_id"],
-            "items": [],
-            "updated_at": datetime.now(timezone.utc)
-        }
+        cart = DbCart(user_id=user["user_id"])
+        db.add(cart)
+        await db.flush()
     
     # Check if item already exists in cart
-    existing_item = None
-    for item in cart["items"]:
-        if item["product_id"] == cart_item.product_id and item.get("color") == cart_item.color:
-            existing_item = item
-            break
+    res = await db.execute(
+        select(DbCartItem).where(
+            (DbCartItem.user_id == user["user_id"]) & 
+            (DbCartItem.product_id == cart_item.product_id) &
+            (DbCartItem.color == cart_item.color)
+        )
+    )
+    existing_item = res.scalar_one_or_none()
     
     if existing_item:
-        # Update quantity
-        new_quantity = existing_item["quantity"] + cart_item.quantity
-        if product["stock"] < new_quantity:
+        new_quantity = existing_item.quantity + cart_item.quantity
+        if product.stock < new_quantity:
             raise HTTPException(status_code=400, detail="Insufficient stock")
-        existing_item["quantity"] = new_quantity
+        existing_item.quantity = new_quantity
     else:
-        # Add new item
-        cart["items"].append({
-            "product_id": cart_item.product_id,
-            "quantity": cart_item.quantity,
-            "color": cart_item.color,
-            "added_at": datetime.now(timezone.utc)
-        })
+        new_item = DbCartItem(
+            user_id=user["user_id"],
+            product_id=cart_item.product_id,
+            quantity=cart_item.quantity,
+            color=cart_item.color
+        )
+        db.add(new_item)
     
-    cart["updated_at"] = datetime.now(timezone.utc)
-    
-    # Update in database
-    await db.carts.update_one(
-        {"user_id": user["user_id"]},
-        {"$set": cart},
-        upsert=True
-    )
-    
-    # Return updated cart
+    await db.commit()
     return await get_cart(request, db)
 
 @api_router.put("/cart/{product_id}")
@@ -452,7 +428,7 @@ async def update_cart_item(
     update_data: UpdateCartRequest,
     request: Request,
     color: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update cart item quantity
@@ -463,43 +439,30 @@ async def update_cart_item(
         raise HTTPException(status_code=400, detail="Quantity must be at least 1")
     
     # Check stock
-    product = await db.products.find_one(
-        {"product_id": product_id},
-        {"_id": 0}
-    )
+    res = await db.execute(select(DbProduct).where(DbProduct.product_id == product_id))
+    product = res.scalar_one_or_none()
     
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    if product["stock"] < update_data.quantity:
+    if product.stock < update_data.quantity:
         raise HTTPException(status_code=400, detail="Insufficient stock")
     
-    # Update cart
-    cart = await db.carts.find_one(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
-    )
-    
-    if not cart:
-        raise HTTPException(status_code=404, detail="Cart not found")
-    
     # Find and update item
-    item_found = False
-    for item in cart["items"]:
-        if item["product_id"] == product_id and item.get("color") == color:
-            item["quantity"] = update_data.quantity
-            item_found = True
-            break
+    res = await db.execute(
+        select(DbCartItem).where(
+            (DbCartItem.user_id == user["user_id"]) & 
+            (DbCartItem.product_id == product_id) &
+            (DbCartItem.color == color)
+        )
+    )
+    item = res.scalar_one_or_none()
     
-    if not item_found:
+    if not item:
         raise HTTPException(status_code=404, detail="Item not found in cart")
     
-    cart["updated_at"] = datetime.now(timezone.utc)
-    
-    await db.carts.update_one(
-        {"user_id": user["user_id"]},
-        {"$set": cart}
-    )
+    item.quantity = update_data.quantity
+    await db.commit()
     
     return await get_cart(request, db)
 
@@ -508,47 +471,36 @@ async def remove_from_cart(
     product_id: str,
     request: Request,
     color: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Remove item from cart
     """
     user = await get_session_user(request, db)
     
-    cart = await db.carts.find_one(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
+    await db.execute(
+        delete(DbCartItem).where(
+            (DbCartItem.user_id == user["user_id"]) & 
+            (DbCartItem.product_id == product_id) &
+            (DbCartItem.color == color)
+        )
     )
-    
-    if not cart:
-        raise HTTPException(status_code=404, detail="Cart not found")
-    
-    # Remove item
-    cart["items"] = [
-        item for item in cart["items"]
-        if not (item["product_id"] == product_id and item.get("color") == color)
-    ]
-    
-    cart["updated_at"] = datetime.now(timezone.utc)
-    
-    await db.carts.update_one(
-        {"user_id": user["user_id"]},
-        {"$set": cart}
-    )
+    await db.commit()
     
     return await get_cart(request, db)
 
 @api_router.delete("/cart")
 async def clear_cart(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Clear entire cart
     """
     user = await get_session_user(request, db)
     
-    await db.carts.delete_one({"user_id": user["user_id"]})
+    await db.execute(delete(DbCartItem).where(DbCartItem.user_id == user["user_id"]))
+    await db.commit()
     
     return {"success": True}
 
@@ -557,24 +509,25 @@ async def clear_cart(
 @api_router.get("/favorites")
 async def get_favorites(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get user's favorite products
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
     
-    favorites = user.get("favorites", [])
+    # Get user object to access favorites list
+    result = await db.execute(select(DbUser).where(DbUser.user_id == user_data["user_id"]))
+    user = result.scalar_one_or_none()
+    
+    favorites = user.favorites if user else []
     
     # Get product details
     products = []
-    for product_id in favorites:
-        product = await db.products.find_one(
-            {"product_id": product_id},
-            {"_id": 0}
-        )
-        if product:
-            products.append(product)
+    if favorites:
+        result = await db.execute(select(DbProduct).where(DbProduct.product_id.in_(favorites)))
+        products_objs = result.scalars().all()
+        products = [{c.name: getattr(p, c.name) for c in p.__table__.columns} for p in products_objs]
     
     return {"favorites": favorites, "products": products}
 
@@ -582,30 +535,30 @@ async def get_favorites(
 async def add_favorite(
     product_id: str,
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Add product to favorites
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
     
     # Check if product exists
-    product = await db.products.find_one(
-        {"product_id": product_id},
-        {"_id": 0}
-    )
-    
-    if not product:
+    result = await db.execute(select(DbProduct).where(DbProduct.product_id == product_id))
+    if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # Add to favorites if not already there
-    favorites = user.get("favorites", [])
+    # Get user object
+    result = await db.execute(select(DbUser).where(DbUser.user_id == user_data["user_id"]))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    favorites = list(user.favorites) # Create copy to ensure mutation is tracked
     if product_id not in favorites:
         favorites.append(product_id)
-        await db.users.update_one(
-            {"user_id": user["user_id"]},
-            {"$set": {"favorites": favorites}}
-        )
+        user.favorites = favorites
+        await db.commit()
     
     return {"favorites": favorites}
 
@@ -613,20 +566,25 @@ async def add_favorite(
 async def remove_favorite(
     product_id: str,
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Remove product from favorites
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
     
-    favorites = user.get("favorites", [])
+    # Get user object
+    result = await db.execute(select(DbUser).where(DbUser.user_id == user_data["user_id"]))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    favorites = list(user.favorites)
     if product_id in favorites:
         favorites.remove(product_id)
-        await db.users.update_one(
-            {"user_id": user["user_id"]},
-            {"$set": {"favorites": favorites}}
-        )
+        user.favorites = favorites
+        await db.commit()
     
     return {"favorites": favorites}
 
@@ -636,99 +594,107 @@ async def remove_favorite(
 async def create_order(
     order_data: CreateOrderRequest,
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create order from cart (checkout)
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
+    user_id = user_data["user_id"]
     
-    # Get cart
-    cart = await db.carts.find_one(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
-    )
+    # Get cart items
+    result = await db.execute(select(DbCartItem).where(DbCartItem.user_id == user_id))
+    cart_items = result.scalars().all()
     
-    if not cart or not cart.get("items"):
+    if not cart_items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     
     # Build order items and calculate total
-    order_items = []
+    order_items_objs = []
     total = 0
     
-    for item in cart["items"]:
-        product = await db.products.find_one(
-            {"product_id": item["product_id"]},
-            {"_id": 0}
-        )
+    for item in cart_items:
+        # Get product and lock for update
+        res = await db.execute(select(DbProduct).where(DbProduct.product_id == item.product_id).with_for_update())
+        product = res.scalar_one_or_none()
         
         if not product:
             continue
         
-        # Check stock
-        if product["stock"] < item["quantity"]:
+        if product.stock < item.quantity:
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient stock for {product['name']}"
+                detail=f"Insufficient stock for {product.name}"
             )
         
-        item_total = product["price"] * item["quantity"]
+        item_total = product.price * item.quantity
         total += item_total
         
-        order_items.append({
-            "product_id": product["product_id"],
-            "name": product["name"],
-            "price": product["price"],
-            "quantity": item["quantity"],
-            "color": item.get("color"),
-            "image": product["image"]
-        })
+        order_items_objs.append(DbOrderItem(
+            product_id=product.product_id,
+            name=product.name,
+            price=product.price,
+            quantity=item.quantity,
+            color=item.color,
+            image=product.image
+        ))
         
         # Reduce stock
-        await db.products.update_one(
-            {"product_id": product["product_id"]},
-            {"$inc": {"stock": -item["quantity"], "sold": item["quantity"]}}
-        )
+        product.stock -= item.quantity
+        product.sold += item.quantity
     
     # Create order
     order_id = f"order_{uuid.uuid4().hex[:12]}"
     order_number = f"ML-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
     
-    order = {
-        "order_id": order_id,
-        "user_id": user["user_id"],
-        "order_number": order_number,
-        "items": order_items,
-        "shipping": order_data.shipping_data.dict(),
-        "total": total,
-        "status": "confirmed",
-        "created_at": datetime.now(timezone.utc)
-    }
+    new_order = DbOrder(
+        order_id=order_id,
+        user_id=user_id,
+        order_number=order_number,
+        total=total,
+        status="confirmed",
+        shipping_data=order_data.shipping_data.dict()
+    )
+    db.add(new_order)
     
-    await db.orders.insert_one(order)
+    # Add items to order
+    for item_obj in order_items_objs:
+        item_obj.order_id = order_id
+        db.add(item_obj)
     
     # Clear cart
-    await db.carts.delete_one({"user_id": user["user_id"]})
+    await db.execute(delete(DbCartItem).where(DbCartItem.user_id == user_id))
     
-    # Return order without _id
-    order_doc = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    await db.commit()
     
-    return {"order": order_doc}
+    return {"order": {
+        "order_id": order_id,
+        "order_number": order_number,
+        "total": total,
+        "status": "confirmed"
+    }}
 
 @api_router.get("/orders")
 async def get_orders(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get user's orders
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
     
-    orders = await db.orders.find(
-        {"user_id": user["user_id"]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    result = await db.execute(
+        select(DbOrder)
+        .where(DbOrder.user_id == user_data["user_id"])
+        .order_by(DbOrder.created_at.desc())
+    )
+    orders_objs = result.scalars().all()
+    
+    orders = []
+    for o in orders_objs:
+        o_dict = {c.name: getattr(o, c.name) for c in o.__table__.columns}
+        orders.append(o_dict)
     
     return {"orders": orders}
 
@@ -736,26 +702,35 @@ async def get_orders(
 async def get_order(
     order_id: str,
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get order by ID
     """
-    user = await get_session_user(request, db)
+    user_data = await get_session_user(request, db)
     
-    order = await db.orders.find_one(
-        {"order_id": order_id, "user_id": user["user_id"]},
-        {"_id": 0}
+    result = await db.execute(
+        select(DbOrder)
+        .where((DbOrder.order_id == order_id) & (DbOrder.user_id == user_data["user_id"]))
     )
+    order = result.scalar_one_or_none()
     
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    return {"order": order}
+    # Get items for this order
+    result = await db.execute(select(DbOrderItem).where(DbOrderItem.order_id == order_id))
+    items_objs = result.scalars().all()
+    items = [{c.name: getattr(i, c.name) for c in i.__table__.columns} for i in items_objs]
+    
+    order_dict = {c.name: getattr(order, c.name) for c in order.__table__.columns}
+    order_dict["items"] = items
+    
+    return {"order": order_dict}
 
 # Include the router in the main app
 app.include_router(api_router)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    await engine.dispose()

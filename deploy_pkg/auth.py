@@ -1,14 +1,14 @@
 from fastapi import Request, HTTPException, Depends
 from datetime import datetime, timezone
 import httpx
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from config import settings
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
+from db_models import DbUser, DbUserSession
 
-async def get_session_user(request: Request, db: AsyncIOMotorDatabase):
+async def get_session_user(request: Request, db: AsyncSession):
     """
     Authenticator helper - checks session_token from cookies first,
     then Authorization header as fallback.
-    WARNING: Don't use FastAPI's HTTPAuthorizationCredentials - it breaks cookie auth.
     """
     # Try to get token from cookie first
     session_token = request.cookies.get("session_token")
@@ -23,36 +23,38 @@ async def get_session_user(request: Request, db: AsyncIOMotorDatabase):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     # Find session in database
-    session_doc = await db.user_sessions.find_one(
-        {"session_token": session_token},
-        {"_id": 0}
-    )
+    result = await db.execute(select(DbUserSession).where(DbUserSession.session_token == session_token))
+    session_obj = result.scalar_one_or_none()
     
-    if not session_doc:
+    if not session_obj:
         raise HTTPException(status_code=401, detail="Invalid session")
     
     # Check if session is expired
-    expires_at = session_doc["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
+    expires_at = session_obj.expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     
     if expires_at < datetime.now(timezone.utc):
         # Delete expired session
-        await db.user_sessions.delete_one({"session_token": session_token})
+        await db.execute(delete(DbUserSession).where(DbUserSession.session_token == session_token))
+        await db.commit()
         raise HTTPException(status_code=401, detail="Session expired")
     
     # Get user data
-    user_doc = await db.users.find_one(
-        {"user_id": session_doc["user_id"]},
-        {"_id": 0}
-    )
+    result = await db.execute(select(DbUser).where(DbUser.user_id == session_obj.user_id))
+    user_obj = result.scalar_one_or_none()
     
-    if not user_doc:
+    if not user_obj:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return user_doc
+    # Convert SQLAlchemy object to dict for consistency
+    return {
+        "user_id": user_obj.user_id,
+        "email": user_obj.email,
+        "name": user_obj.name,
+        "picture": user_obj.picture,
+        "favorites": user_obj.favorites
+    }
 
 async def exchange_session_id(session_id: str) -> dict:
     """

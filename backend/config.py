@@ -14,10 +14,18 @@ class Settings:
     Application settings loaded from environment variables
     """
     
-    # MongoDB
-    MONGODB_URI: str = os.getenv("MONGODB_URI")
-    if not MONGODB_URI:
-        raise ValueError("MONGODB_URI environment variable is required")
+    # Database Connections
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    
+    # PostgreSQL Details
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "insforge")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "")
+
+    # Validation in Settings class removed to allow either Mongo or Postgres
     
     # OAuth (optional)
     OAUTH_CLIENT_ID: str = os.getenv("OAUTH_CLIENT_ID", "")
@@ -71,19 +79,15 @@ settings = Settings()
 
 # Validate critical settings on import
 def validate_settings():
-    """Validate that all required settings are present"""
-    required = {
-        "MONGODB_URI": settings.MONGODB_URI,
-        "SECRET_KEY": settings.SECRET_KEY,
-    }
-    
-    missing = [key for key, value in required.items() if not value]
-    
-    if missing:
+    """Validar que al menos una base de datos esté configurada"""
+    if not settings.MONGODB_URI and not settings.DATABASE_URL:
         raise ValueError(
-            f"Missing required environment variables: {', '.join(missing)}\n"
-            f"Please check your .env file. See .env.example for reference."
+            "Se requiere al menos MONGODB_URI o DATABASE_URL.\n"
+            "Por favor revise su archivo .env."
         )
+    
+    if not settings.SECRET_KEY:
+        raise ValueError("SECRET_KEY es requerido.")
 
 # Run validation
 validate_settings()

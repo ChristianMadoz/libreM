@@ -14,8 +14,16 @@ class Settings:
     Application settings loaded from environment variables
     """
     
-    # MongoDB
+    # MongoDB (Legacy)
     MONGODB_URI: str = os.getenv("MONGODB_URI", "")
+    
+    # PostgreSQL (New)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "insforge")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "")
     
     # OAuth (optional)
     OAUTH_CLIENT_ID: str = os.getenv("OAUTH_CLIENT_ID", "")
