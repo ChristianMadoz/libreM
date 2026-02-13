@@ -1,7 +1,7 @@
 services:
   - name: frontend
     build: npm run build
-    start: npm run preview
+    start: npx serve -s build -l 3000
     path: ./frontend
     port: 3000
 
