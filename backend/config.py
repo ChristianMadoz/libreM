@@ -92,7 +92,7 @@ def validate_settings():
     if not settings.DATABASE_URL:
         # Fallack for local dev if not set
         print("WARNING: DATABASE_URL not found in env, using local default")
-        settings.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/libre_mercado"
+        settings.DATABASE_URL = "postgresql://postgres:eca71ec8ff16ce808ef35cf63598b488@ciyndj73.us-east.database.insforge.app:5432/insforge?sslmode=require"
 
 # Run validation
 validate_settings()
