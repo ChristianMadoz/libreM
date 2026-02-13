@@ -2,16 +2,23 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from config import settings
 
-# Ensure we use the asyncpg driver
+# Ensure we use the asyncpg driver and clean the URL
 DATABASE_URL = settings.DATABASE_URL
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    # Remove ?sslmode=require if present because asyncpg doesn't support it in the string
+    if "?sslmode=" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.split("?")[0]
 
 # Create async engine
 engine = create_async_engine(
     DATABASE_URL,
     echo=True if not settings.IS_PRODUCTION else False,
     pool_pre_ping=True,
+    connect_args={"ssl": True} if "insforge" in DATABASE_URL else {}
 )
 
 # Async session factory

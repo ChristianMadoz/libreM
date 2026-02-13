@@ -7,7 +7,10 @@ from dotenv import load_dotenv
 from typing import List
 
 # Load environment variables from .env file
-load_dotenv()
+# Try several locations to find the .env file
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
+load_dotenv(env_path)
+print(f"DEBUG: Loading .env from: {env_path}")
 
 class Settings:
     """
