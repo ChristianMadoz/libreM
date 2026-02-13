@@ -17,7 +17,7 @@ from models import (
 )
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
