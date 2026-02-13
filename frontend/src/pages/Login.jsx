@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -10,35 +10,38 @@ const Login = () => {
   const redirect = searchParams.get('redirect') || '/';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { isAuthenticated, login, devLogin } = useAuth();
+  const { isAuthenticated, loading: authLoading, login, devLogin } = useAuth();
+
+  useEffect(() => {
+    console.log('Login page state:', { isAuthenticated, authLoading, redirect });
+  }, [isAuthenticated, authLoading, redirect]);
 
   // If already authenticated, redirect
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !authLoading) {
       navigate(redirect);
     }
-  }, [isAuthenticated, navigate, redirect]);
+  }, [isAuthenticated, authLoading, navigate, redirect]);
 
   // Handle OAuth callback
   useEffect(() => {
-    const handleCallback = async () => {
-      const sessionId = searchParams.get('session_id');
-      if (sessionId) {
+    const sessionId = searchParams.get('session_id');
+    if (sessionId && !isAuthenticated) {
+      const handleCallback = async () => {
         setLoading(true);
         setError(null);
         try {
           await login(sessionId);
-          // AuthContext will handle redirect via the isAuthenticated effect above
         } catch (err) {
           console.error('Login failed:', err);
           setError('Error al iniciar sesión. Por favor, intenta de nuevo.');
+        } finally {
           setLoading(false);
         }
-      }
-    };
-
-    handleCallback();
-  }, [searchParams, login]);
+      };
+      handleCallback();
+    }
+  }, [searchParams, login, isAuthenticated]);
 
   const handleGoogleLogin = () => {
     setLoading(true);
