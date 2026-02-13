@@ -13,7 +13,9 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const cart = getMockCart();
+  const { cart, clearCart, loading: cartLoading } = useCart();
+
+  const cartItems = React.useMemo(() => cart?.items || [], [cart?.items]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -52,15 +54,15 @@ const Checkout = () => {
     }).format(price);
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = cart.some(item => !item.freeShipping) ? 15.99 : 0;
+  const subtotal = cart?.total || 0;
+  const shipping = cartItems.some(item => !item.free_shipping) ? 15.99 : 0;
   const total = subtotal + shipping;
 
   useEffect(() => {
-    if (!authLoading && cart.length === 0) {
+    if (!authLoading && !cartLoading && cartItems.length === 0) {
       navigate('/cart');
     }
-  }, [cart, navigate, authLoading]);
+  }, [cartItems, navigate, authLoading, cartLoading]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -68,7 +70,7 @@ const Checkout = () => {
     }
   }, [isAuthenticated, navigate, authLoading]);
 
-  if (authLoading) {
+  if (authLoading || cartLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
@@ -76,7 +78,7 @@ const Checkout = () => {
     );
   }
 
-  if (cart.length === 0 || !isAuthenticated) {
+  if (cartItems.length === 0 || !isAuthenticated) {
     return null;
   }
 
@@ -90,22 +92,27 @@ const Checkout = () => {
     setLoading(true);
 
     // Simulate payment processing
-    setTimeout(() => {
+    setTimeout(async () => {
       const order = {
         id: Date.now(),
         date: new Date().toISOString(),
-        items: cart,
+        items: cartItems,
         total: total,
         shipping: shippingData,
         status: 'confirmed'
       };
 
-      const orders = getMockOrders();
-      setMockOrders([order, ...orders]);
-      setMockCart([]);
+      try {
+        const orders = getMockOrders();
+        setMockOrders([order, ...orders]);
+        await clearCart();
 
-      setLoading(false);
-      setStep(3);
+        setLoading(false);
+        setStep(3);
+      } catch (error) {
+        toast({ title: 'Error al finalizar compra', variant: 'destructive' });
+        setLoading(false);
+      }
     }, 2000);
   };
 
@@ -380,7 +387,7 @@ const Checkout = () => {
               <h2 className="text-xl font-bold text-gray-900 mb-6">Resumen del pedido</h2>
 
               <div className="space-y-4 mb-6">
-                {cart.map((item, index) => (
+                {cartItems.map((item, index) => (
                   <div key={index} className="flex gap-3">
                     <img
                       src={item.image}
@@ -389,9 +396,9 @@ const Checkout = () => {
                     />
                     <div className="flex-1">
                       <p className="text-sm text-gray-800 line-clamp-2">{item.name}</p>
-                      <p className="text-sm text-gray-600">Cantidad: {item.quantity}</p>
+                      <p className="text-sm text-gray-600">Cantidad: {item.cart_quantity}</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {formatPrice(item.price * item.quantity)}
+                        {formatPrice(item.price * item.cart_quantity)}
                       </p>
                     </div>
                   </div>

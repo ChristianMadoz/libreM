@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMockCart, setMockCart } from '../mock';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -9,21 +10,27 @@ import { useToast } from '../hooks/use-toast';
 const Cart = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [cart, setCart] = useState(getMockCart());
+  const { isAuthenticated } = useAuth();
+  const { cart, loading, updateCartItem, removeFromCart } = useCart();
 
-  const updateQuantity = (index, newQuantity) => {
+  const cartItems = cart?.items || [];
+
+  const updateQuantity = async (productId, color, newQuantity) => {
     if (newQuantity < 1) return;
-    const newCart = [...cart];
-    newCart[index].quantity = Math.min(newQuantity, newCart[index].stock);
-    setCart(newCart);
-    setMockCart(newCart);
+    try {
+      await updateCartItem(productId, newQuantity, color);
+    } catch (error) {
+      toast({ title: 'Error al actualizar cantidad', variant: 'destructive' });
+    }
   };
 
-  const removeItem = (index) => {
-    const newCart = cart.filter((_, i) => i !== index);
-    setCart(newCart);
-    setMockCart(newCart);
-    toast({ title: 'Producto eliminado del carrito' });
+  const removeItem = async (productId, color) => {
+    try {
+      await removeFromCart(productId, color);
+      toast({ title: 'Producto eliminado del carrito' });
+    } catch (error) {
+      toast({ title: 'Error al eliminar producto', variant: 'destructive' });
+    }
   };
 
   const formatPrice = (price) => {
@@ -33,11 +40,19 @@ const Cart = () => {
     }).format(price);
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = cart.some(item => !item.freeShipping) ? 15.99 : 0;
+  const subtotal = cart?.total || 0;
+  const shipping = cartItems.some(item => !item.free_shipping) ? 15.99 : 0;
   const total = subtotal + shipping;
 
-  if (cart.length === 0) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
+
+  if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -63,13 +78,13 @@ const Cart = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cart.map((item, index) => (
-              <Card key={`${item.id}-${item.color}-${index}`} className="p-6 bg-white">
+            {cartItems.map((item, index) => (
+              <Card key={`${item.product_id}-${item.color}-${index}`} className="p-6 bg-white">
                 <div className="flex gap-6">
                   {/* Product Image */}
                   <div
                     className="w-32 h-32 flex-shrink-0 bg-white rounded-lg overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/product/${item.id}`)}
+                    onClick={() => navigate(`/product/${item.product_id}`)}
                   >
                     <img
                       src={item.image}
@@ -84,21 +99,21 @@ const Cart = () => {
                       <div>
                         <h3
                           className="text-lg font-semibold text-gray-900 mb-2 cursor-pointer hover:text-[#3483FA]"
-                          onClick={() => navigate(`/product/${item.id}`)}
+                          onClick={() => navigate(`/product/${item.product_id}`)}
                         >
                           {item.name}
                         </h3>
                         {item.color && (
                           <p className="text-sm text-gray-600 mb-2">Color: {item.color}</p>
                         )}
-                        {item.freeShipping && (
+                        {item.free_shipping && (
                           <p className="text-sm text-green-600 font-semibold mb-2">
                             Envío gratis
                           </p>
                         )}
                       </div>
                       <button
-                        onClick={() => removeItem(index)}
+                        onClick={() => removeItem(item.product_id, item.color)}
                         className="text-gray-400 hover:text-red-500 transition-colors h-fit"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -109,16 +124,16 @@ const Cart = () => {
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => updateQuantity(index, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.product_id, item.color, item.cart_quantity - 1)}
                           className="w-8 h-8 border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="text-lg font-semibold w-8 text-center">
-                          {item.quantity}
+                          {item.cart_quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(index, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.product_id, item.color, item.cart_quantity + 1)}
                           className="w-8 h-8 border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
@@ -128,9 +143,9 @@ const Cart = () => {
                       {/* Price */}
                       <div className="text-right">
                         <p className="text-2xl font-bold text-gray-900">
-                          {formatPrice(item.price * item.quantity)}
+                          {formatPrice(item.price * item.cart_quantity)}
                         </p>
-                        {item.quantity > 1 && (
+                        {item.cart_quantity > 1 && (
                           <p className="text-sm text-gray-500">
                             {formatPrice(item.price)} c/u
                           </p>

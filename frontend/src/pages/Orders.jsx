@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMockOrders, getMockUser } from '../mock';
+import { useAuth } from '../context/AuthContext';
+import { getMockOrders } from '../mock';
 import { Package, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -8,10 +9,18 @@ import { Badge } from '../components/ui/badge';
 
 const Orders = () => {
   const navigate = useNavigate();
-  const user = getMockUser();
+  const { user, isAuthenticated, loading } = useAuth();
   const orders = getMockOrders();
 
-  if (!user) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     navigate('/login?redirect=/orders');
     return null;
   }

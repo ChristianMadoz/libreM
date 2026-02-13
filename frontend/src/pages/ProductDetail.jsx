@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockProducts } from '../mock';
 import { Heart, Truck, ShoppingCart, Shield, CreditCard } from 'lucide-react';
-import { getMockFavorites, setMockFavorites, getMockCart, setMockCart } from '../mock';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
@@ -12,12 +13,15 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const { cart, addToCart: addToCartContext, favorites, addFavorite, removeFavorite } = useCart();
+
   const product = mockProducts.find(p => p.id === parseInt(id));
   const [selectedColor, setSelectedColor] = useState(product?.colors[0]);
   const [quantity, setQuantity] = useState(1);
-  
-  const favorites = getMockFavorites();
-  const isFavorite = favorites.some(fav => fav === product?.id);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const isFavorite = favorites.some(fav => fav.product_id === product?.id);
 
   if (!product) {
     return (
@@ -30,37 +34,55 @@ const ProductDetail = () => {
     );
   }
 
-  const toggleFavorite = () => {
-    let newFavorites;
-    if (isFavorite) {
-      newFavorites = favorites.filter(fav => fav !== product.id);
-      toast({ title: 'Eliminado de favoritos' });
-    } else {
-      newFavorites = [...favorites, product.id];
-      toast({ title: 'Agregado a favoritos', description: product.name });
+  const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/product/' + id);
+      return;
     }
-    setMockFavorites(newFavorites);
+
+    try {
+      if (isFavorite) {
+        await removeFavorite(product.id);
+        toast({ title: 'Eliminado de favoritos' });
+      } else {
+        await addFavorite(product.id);
+        toast({ title: 'Agregado a favoritos', description: product.name });
+      }
+    } catch (error) {
+      toast({ title: 'Error al actualizar favoritos', variant: 'destructive' });
+    }
   };
 
-  const addToCart = () => {
-    const cart = getMockCart();
-    const existingItem = cart.find(item => item.id === product.id && item.color === selectedColor);
-    
-    if (existingItem) {
-      existingItem.quantity += quantity;
-      setMockCart(cart);
-    } else {
-      setMockCart([...cart, { ...product, quantity, color: selectedColor }]);
+  const addToCart = async () => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/product/' + id);
+      return;
     }
-    
-    toast({
-      title: '¡Agregado al carrito!',
-      description: `${quantity}x ${product.name}`
-    });
+
+    setIsAdding(true);
+    try {
+      await addToCartContext(product.id, quantity, selectedColor);
+      toast({
+        title: '¡Agregado al carrito!',
+        description: `${quantity}x ${product.name}`
+      });
+    } catch (error) {
+      toast({
+        title: 'Error al agregar al carrito',
+        description: 'No se pudo agregar el producto. Intentá de nuevo.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
-  const buyNow = () => {
-    addToCart();
+  const buyNow = async () => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/product/' + id);
+      return;
+    }
+    await addToCart();
     navigate('/cart');
   };
 
@@ -105,11 +127,11 @@ const ProductDetail = () => {
                   </Badge>
                 )}
               </div>
-              
+
               {/* Product Info */}
               <div className="mt-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">{product.name}</h1>
-                
+
                 {/* Rating */}
                 {product.rating && (
                   <div className="flex items-center gap-4 mb-4">
@@ -117,11 +139,10 @@ const ProductDetail = () => {
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className={`w-5 h-5 ${
-                            i < Math.floor(product.rating)
+                          className={`w-5 h-5 ${i < Math.floor(product.rating)
                               ? 'text-yellow-400 fill-yellow-400'
                               : 'text-gray-300'
-                          }`}
+                            }`}
                           viewBox="0 0 20 20"
                         >
                           <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -208,11 +229,10 @@ const ProductDetail = () => {
                       <button
                         key={color}
                         onClick={() => setSelectedColor(color)}
-                        className={`px-4 py-2 border rounded-lg text-sm transition-all ${
-                          selectedColor === color
+                        className={`px-4 py-2 border rounded-lg text-sm transition-all ${selectedColor === color
                             ? 'border-[#3483FA] bg-blue-50 text-[#3483FA] font-semibold'
                             : 'border-gray-300 hover:border-gray-400'
-                        }`}
+                          }`}
                       >
                         {color}
                       </button>
@@ -266,9 +286,8 @@ const ProductDetail = () => {
                   className="w-full border border-gray-300 hover:bg-gray-50 py-6 text-lg rounded-lg"
                 >
                   <Heart
-                    className={`w-5 h-5 mr-2 ${
-                      isFavorite ? 'fill-red-500 text-red-500' : ''
-                    }`}
+                    className={`w-5 h-5 mr-2 ${isFavorite ? 'fill-red-500 text-red-500' : ''
+                      }`}
                   />
                   {isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                 </Button>
