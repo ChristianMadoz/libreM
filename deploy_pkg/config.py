@@ -15,18 +15,14 @@ class Settings:
     """
     
     # MongoDB
-    MONGODB_URI: str = os.getenv("MONGODB_URI")
-    if not MONGODB_URI:
-        raise ValueError("MONGODB_URI environment variable is required")
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
     
     # OAuth (optional)
     OAUTH_CLIENT_ID: str = os.getenv("OAUTH_CLIENT_ID", "")
     OAUTH_CLIENT_SECRET: str = os.getenv("OAUTH_CLIENT_SECRET", "")
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable is required")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "default-secret-key-change-me")
     
     # CORS
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://libre-m.vercel.app")

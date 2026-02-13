@@ -16,9 +16,24 @@ from models import (
     CreateOrderRequest, ShippingData
 )
 
-# MongoDB connection - using environment variable from config
-client = AsyncIOMotorClient(settings.MONGODB_URI)
-db = client.get_database()  # Uses database from URI
+# MongoDB connection - lazily initialized
+_client = None
+
+def get_motor_client():
+    global _client
+    if _client is None:
+        if not settings.MONGODB_URI:
+            logger.error("MONGODB_URI is not set!")
+            return None
+        _client = AsyncIOMotorClient(settings.MONGODB_URI)
+    return _client
+
+# Dependency to get database
+async def get_db() -> AsyncIOMotorDatabase:
+    client = get_motor_client()
+    if client is None:
+        raise HTTPException(status_code=500, detail="Database configuration missing")
+    return client.get_database()
 
 # Create the main app without a prefix
 app = FastAPI(title="LibreM API", version="1.0.0")
