@@ -1,0 +1,21 @@
+#{
+# "env_image_name": "fastapi_react_mongo_shadcn_base_image_cloud_arm:release-09012026-2"
+#}
+
+services:
+  - name: frontend
+    build: npm run build
+    start: npm run preview
+    path: ./frontend
+    port: 3000
+
+  - name: backend
+    build: npm install
+    start: node server.js
+    path: ./backend
+    port: 4000
+routes:
+  - path: /api
+    service: backend
+  - path: /
+    service: frontend
