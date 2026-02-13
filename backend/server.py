@@ -34,6 +34,10 @@ app.add_middleware(
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+@api_router.get("/health")
+def health_check():
+    return {"status": "ok", "db": "postgres"}
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
