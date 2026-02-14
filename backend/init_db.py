@@ -2,6 +2,12 @@
 Initialize database tables
 Run this script to create all tables in the database
 """
+import sys
+import os
+
+# Add current directory to path so we can import modules if run from root
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from sqlalchemy import text
 from database import engine, Base
 import db_models  # Ensure all models are imported
