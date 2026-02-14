@@ -52,7 +52,7 @@ const Checkout = () => {
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: '$'
+      currency: 'USD'
     }).format(price);
   };
 

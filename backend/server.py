@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 # Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+api_router = APIRouter()
 
 @api_router.get("/health")
 def health_check():
@@ -849,4 +849,6 @@ async def get_order(
     }
 
 # Include the router in the main app
+# Include the router twice to handle both cases (gateway stripping prefix or not)
+app.include_router(api_router, prefix="/api")
 app.include_router(api_router)
