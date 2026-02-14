@@ -20,6 +20,7 @@ const Checkout = () => {
   const cartItems = React.useMemo(() => cart?.items || [], [cart?.items]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [shippingData, setShippingData] = useState({
     fullName: user?.name || '',
@@ -96,7 +97,7 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      setProcessing(true);
+      setLoading(true);
       setError(null);
 
       let order;
@@ -144,7 +145,7 @@ const Checkout = () => {
         variant: "destructive"
       });
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
   };
 
