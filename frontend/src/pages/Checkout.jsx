@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { ordersAPI } from '../services/api';
 import { getMockCart, setMockCart, getMockOrders, setMockOrders } from '../mock';
 import { CreditCard, Truck, MapPin, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
