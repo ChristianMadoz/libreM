@@ -180,14 +180,14 @@ const Admin = () => {
                         <div className="space-y-2">
                             <Button
                                 className="w-full bg-purple-600 hover:bg-purple-700"
-                                onClick={() => alert('Función de estadísticas en desarrollo')}
+                                onClick={() => navigate('/admin/reports')}
                             >
                                 📊 Ver Estadísticas
                             </Button>
                             <Button
                                 variant="outline"
                                 className="w-full"
-                                onClick={() => alert('Función de reportes en desarrollo')}
+                                onClick={() => navigate('/admin/reports')}
                             >
                                 📈 Generar Reporte
                             </Button>

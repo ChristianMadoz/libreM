@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import AdminReports from './pages/AdminReports';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -39,6 +40,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
             </Routes>
             <Toaster />
           </CartProvider>
