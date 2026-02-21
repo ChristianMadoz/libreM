@@ -18,6 +18,7 @@ import AdminReports from './pages/AdminReports';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
               <Route path="/admin/reports" element={<AdminReports />} />
             </Routes>
             <Toaster />
+            <SpeedInsights />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
