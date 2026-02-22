@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './App.css';
 import Header from './components/Header';
 import Home from './pages/Home';
@@ -43,6 +44,7 @@ function App() {
               <Route path="/admin/reports" element={<AdminReports />} />
             </Routes>
             <Toaster />
+            <SpeedInsights />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
