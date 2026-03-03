@@ -58,7 +58,8 @@ class Settings:
         origins = [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            self.FRONTEND_URL
+            self.FRONTEND_URL,
+            "https://ciyndj73.insforge.site"
         ]
         
         # Add production domain if valid
@@ -68,8 +69,10 @@ class Settings:
         # Add current InsForge domain if available
         # You might need to add specific insforge domains here if they change dynamically
         origins.append("https://ciyndj73.us-east.insforge.app") 
+        origins.append("https://ciyndj73.insforge.site") 
         
         return list(set(origins)) # Remove duplicates
+
 
     
     # Cookie settings
