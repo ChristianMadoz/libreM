@@ -101,3 +101,19 @@ class Order(BaseModel):
 class CreateOrderRequest(BaseModel):
     shipping_data: ShippingData
     payment_data: PaymentData
+
+class CreateProductRequest(BaseModel):
+    name: str
+    price: float
+    original_price: Optional[float] = None
+    discount: int = 0
+    image: str
+    category: str
+    category_id: int
+    free_shipping: bool = False
+    stock: int = 0
+    description: str
+    features: List[str] = []
+    colors: List[str] = []
+    seller: str
+    verified: bool = False

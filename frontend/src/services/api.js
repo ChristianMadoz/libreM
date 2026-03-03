@@ -108,7 +108,13 @@ export const productsAPI = {
     const response = await api.get('/categories');
     return response.data.categories;
   },
+
+  createProduct: async (productData) => {
+    const response = await api.post('/products', productData);
+    return response.data;
+  },
 };
+
 
 // Cart APIs
 export const cartAPI = {

@@ -13,7 +13,8 @@ from database import get_db, engine, Base
 import db_models
 from models import (
     AddToCartRequest, UpdateCartRequest,
-    CreateOrderRequest, ShippingData
+    CreateOrderRequest, ShippingData,
+    CreateProductRequest
 )
 
 # Create database tables
@@ -347,6 +348,45 @@ async def get_product(product_id: str, db: Session = Depends(get_db)):
             "verified": product.verified
         }
     }
+
+@api_router.post("/products")
+async def create_product(
+    product_data: CreateProductRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new product
+    """
+    # Generate a unique product_id
+    product_id = f"MLB{uuid.uuid4().hex[:12].upper()}"
+    
+    new_product = db_models.Product(
+        product_id=product_id,
+        name=product_data.name,
+        price=product_data.price,
+        original_price=product_data.original_price,
+        discount=product_data.discount,
+        image=product_data.image,
+        category=product_data.category,
+        category_id=product_data.category_id,
+        free_shipping=product_data.free_shipping,
+        rating=5.0, # Default rating for new products
+        reviews=0,
+        sold=0,
+        stock=product_data.stock,
+        description=product_data.description,
+        features=product_data.features,
+        colors=product_data.colors,
+        seller=product_data.seller,
+        verified=product_data.verified
+    )
+    
+    db.add(new_product)
+    db.commit()
+    db.refresh(new_product)
+    
+    return {"success": True, "product_id": product_id, "product": product_data}
+
 
 @api_router.get("/categories")
 async def get_categories(db: Session = Depends(get_db)):
