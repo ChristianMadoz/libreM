@@ -14,6 +14,7 @@ import Orders from './pages/Orders';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Posts from './pages/Posts';
 import Admin from './pages/Admin';
 import AdminReports from './pages/AdminReports';
 import { Toaster } from './components/ui/sonner';
@@ -40,6 +41,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<Profile />} />
+              <Route path="/posts" element={<Posts />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/reports" element={<AdminReports />} />
             </Routes>
