@@ -28,7 +28,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex="https://.*\.insforge\.(app|site)",
+    allow_origin_regex=r"https://.*\.insforge\.(app|site)",
     allow_methods=["*"],
     allow_headers=["*"],
 )
