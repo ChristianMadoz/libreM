@@ -100,3 +100,7 @@ def validate_settings():
 
 # Run validation
 validate_settings()
+
+if settings.DATABASE_URL and settings.DATABASE_URL.startswith("postgres://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
