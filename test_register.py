@@ -2,10 +2,10 @@ import urllib.request
 import json
 
 def test_register():
-    url = 'https://e5qh9i8z.us-east.insforge.app/api/auth/register'
+    url = 'https://ciyndj73.insforge.site/api/auth/register'
     data = json.dumps({
         "name": "Test User",
-        "email": "testregister3@example.com",
+        "email": "testregister5@example.com",
         "password": "password123"
     }).encode('utf-8')
     
