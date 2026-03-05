@@ -8,7 +8,7 @@ from config import settings
 
 # Create database engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.FINAL_DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using them
     pool_size=10,
     max_overflow=20
