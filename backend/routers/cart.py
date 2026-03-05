@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
 from database import get_db
-from auth import get_session_user
+from auth_helper import get_session_user
 import db_models
 from schemas.cart import Cart, CartItemCreate, CartItemUpdate
 

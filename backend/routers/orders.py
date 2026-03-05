@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
 from database import get_db
-from auth import get_session_user
+from auth_helper import get_session_user
 import db_models
 from schemas.order import OrderCreate, Order, OrderList
 

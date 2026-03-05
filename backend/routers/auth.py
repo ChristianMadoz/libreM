@@ -5,7 +5,7 @@ import uuid
 import hashlib
 import re
 from database import get_db
-from auth import get_session_user, exchange_session_id
+from auth_helper import get_session_user, exchange_session_id
 from config import settings
 import db_models
 from schemas.auth import GoogleAuthRequest, UserRegister, Token, User
