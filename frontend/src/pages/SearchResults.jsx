@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { mockProducts } from '../mock';
+import { productActions } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -16,24 +16,33 @@ const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get('q') || '';
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('relevance');
   const [priceRange, setPriceRange] = useState('all');
   const [, setRefresh] = useState(0);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      setLoading(true);
+      try {
+        const response = await productActions.getProducts({ search: query });
+        setProducts(response.products || []);
+      } catch (error) {
+        console.error('Error fetching search results:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResults();
+  }, [query]);
 
   const handleFavoriteChange = () => {
     setRefresh(prev => prev + 1);
   };
 
-  // Filter products
-  let filteredProducts = mockProducts;
-
-  if (query) {
-    filteredProducts = filteredProducts.filter(product =>
-      product.name.toLowerCase().includes(query.toLowerCase()) ||
-      product.category.toLowerCase().includes(query.toLowerCase()) ||
-      product.description.toLowerCase().includes(query.toLowerCase())
-    );
-  }
+  // Filter products locally (or could be done via API if supported)
+  let filteredProducts = [...products];
 
   // Filter by price range
   if (priceRange === 'under100') {
@@ -55,6 +64,14 @@ const SearchResults = () => {
     filteredProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   } else if (sortBy === 'discount') {
     filteredProducts.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
   }
 
   return (
@@ -110,13 +127,16 @@ const SearchResults = () => {
         {/* Results */}
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onFavoriteChange={handleFavoriteChange}
-              />
-            ))}
+            {filteredProducts.map((product) => {
+              const productId = product.product_id || product.id;
+              return (
+                <ProductCard
+                  key={productId}
+                  product={product}
+                  onFavoriteChange={handleFavoriteChange}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-lg p-12 text-center">

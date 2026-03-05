@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ordersAPI } from '../services/api';
-import { getMockOrders } from '../mock';
+import { orderActions } from '../services/api';
 import { Package, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -24,12 +23,10 @@ const Orders = () => {
       if (isAuthenticated) {
         setPageLoading(true);
         try {
-          const data = await ordersAPI.getOrders();
-          setOrders(data || []);
+          const data = await orderActions.getOrders();
+          setOrders(data.orders || []);
         } catch (error) {
-          console.warn('Backend orders failed, using mock');
-          const { getMockOrders } = await import('../mock');
-          setOrders(getMockOrders());
+          console.error('Error fetching orders:', error);
         } finally {
           setPageLoading(false);
         }
@@ -47,11 +44,6 @@ const Orders = () => {
     );
   }
 
-  // The isAuthenticated check is now handled within useEffect, so if we reach here,
-  // and isAuthenticated is false, it means the navigate has already been called.
-  // However, to be safe, we can keep a redundant check or ensure useEffect's navigation is synchronous enough.
-  // For now, let's assume useEffect handles the redirect before rendering the rest.
-
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -60,6 +52,7 @@ const Orders = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'Fecha desconocida';
     const date = new Date(dateString);
     return date.toLocaleDateString('es-AR', {
       year: 'numeric',
@@ -107,12 +100,12 @@ const Orders = () => {
                     <h3 className="text-lg font-bold text-gray-900">
                       Pedido #{order.id}
                     </h3>
-                    <Badge className="bg-green-500 hover:bg-green-600 text-white">
-                      Confirmado
+                    <Badge className={`${order.status === 'cancelled' ? 'bg-red-500' : 'bg-green-500'} text-white`}>
+                      {order.status === 'confirmed' ? 'Confirmado' : order.status}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Realizado el {formatDate(order.date)}
+                    Realizado el {formatDate(order.created_at || order.date)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -124,55 +117,61 @@ const Orders = () => {
               </div>
 
               <div className="space-y-4 mb-6">
-                {order.items.map((item, index) => (
-                  <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-20 h-20 object-contain bg-white rounded cursor-pointer"
-                      onClick={() => navigate(`/product/${item.id}`)}
-                    />
-                    <div className="flex-1">
-                      <h4
-                        className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-[#3483FA]"
-                        onClick={() => navigate(`/product/${item.id}`)}
-                      >
-                        {item.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Cantidad: {item.quantity}
-                        {item.color && ` | Color: ${item.color}`}
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {formatPrice(item.price * item.quantity)}
-                      </p>
+                {order.items?.map((item, index) => {
+                  const itemId = item.product_id || item.id;
+                  return (
+                    <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-20 h-20 object-contain bg-white rounded cursor-pointer"
+                        onClick={() => navigate(`/product/${itemId}`)}
+                      />
+                      <div className="flex-1">
+                        <h4
+                          className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-[#3483FA]"
+                          onClick={() => navigate(`/product/${itemId}`)}
+                        >
+                          {item.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Cantidad: {item.quantity}
+                          {item.color && ` | Color: ${item.color}`}
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatPrice(item.price * item.quantity)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              <div className="border-t border-gray-200 pt-4">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Dirección de envío</h4>
-                    <p className="text-sm text-gray-600">{order.shipping.fullName}</p>
-                    <p className="text-sm text-gray-600">{order.shipping.address}</p>
-                    <p className="text-sm text-gray-600">
-                      {order.shipping.city}, {order.shipping.province} - {order.shipping.postalCode}
-                    </p>
-                    <p className="text-sm text-gray-600">{order.shipping.phone}</p>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <Button
-                      variant="outline"
-                      className="border-[#3483FA] text-[#3483FA] hover:bg-blue-50"
-                    >
-                      Ver detalles
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
+              {order.shipping && (
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Dirección de envío</h4>
+                      <p className="text-sm text-gray-600">{order.shipping.fullName}</p>
+                      <p className="text-sm text-gray-600">{order.shipping.address}</p>
+                      <p className="text-sm text-gray-600">
+                        {order.shipping.city}, {order.shipping.province} - {order.shipping.postalCode}
+                      </p>
+                      <p className="text-sm text-gray-600">{order.shipping.phone}</p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <Button
+                        variant="outline"
+                        className="border-[#3483FA] text-[#3483FA] hover:bg-blue-50"
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                      >
+                        Ver detalles
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </Card>
           ))}
         </div>

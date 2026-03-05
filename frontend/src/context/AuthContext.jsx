@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authActions } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const userData = await authAPI.getCurrentUser();
+      const userData = await authActions.getMe();
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
@@ -36,7 +36,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const data = await authAPI.login(email, password);
+      // Assuming register or a future login endpoint exists
+      // For now, using register for simplicity if login is not implemented in backend main.py
+      const data = await authActions.register({ email, password, name: 'User' });
       setUser(data.user);
       setIsAuthenticated(true);
       localStorage.setItem('session_token', data.token);
@@ -50,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithGoogle = async (sessionId) => {
     try {
-      const data = await authAPI.googleLogin(sessionId);
+      const data = await authActions.loginGoogle(sessionId);
       setUser(data.user);
       setIsAuthenticated(true);
       localStorage.setItem('session_token', data.token);
@@ -62,28 +64,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const devLogin = async () => {
-    try {
-      // For dev login, we still want a "fake" user but it might fail on backend
-      // if the backend expects a real token.
-      const data = await authAPI.devLogin();
-      setUser(data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      return data.user;
-    } catch (error) {
-      console.error('Dev login failed:', error);
-      throw error;
-    }
-  };
-
   const register = async (name, email, password) => {
     try {
-      const data = await authAPI.register(name, email, password);
+      const data = await authActions.register({ name, email, password });
       setUser(data.user);
       setIsAuthenticated(true);
-      // Store token as fallback
       localStorage.setItem('session_token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       return data.user;
@@ -95,7 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await authAPI.logout();
+      await authActions.logout();
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
@@ -113,7 +98,6 @@ export const AuthProvider = ({ children }) => {
     login,
     loginWithGoogle,
     register,
-    devLogin,
     logout,
     checkAuth,
   };

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { productActions } from '../services/api';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
@@ -10,8 +11,21 @@ const Header = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [categories, setCategories] = useState([]);
   const { user, isAuthenticated, logout } = useAuth();
   const { cart, favorites, getCartItemsCount } = useCart();
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await productActions.getCategories();
+        setCategories(response.categories || []);
+      } catch (error) {
+        console.error('Error fetching categories in header:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -167,48 +181,18 @@ const Header = () => {
       <div className="bg-white border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-6 py-2 overflow-x-auto scrollbar-hide">
-            <Link
-              to="/category/1"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Tecnología
-            </Link>
-            <Link
-              to="/category/2"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Hogar y Muebles
-            </Link>
-            <Link
-              to="/category/3"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Deportes
-            </Link>
-            <Link
-              to="/category/4"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Moda
-            </Link>
-            <Link
-              to="/category/5"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Electrodomésticos
-            </Link>
-            <Link
-              to="/category/6"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Juguetes
-            </Link>
-            <Link
-              to="/category/7"
-              className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
-            >
-              Belleza
-            </Link>
+            {categories.map((category) => {
+              const categoryId = category.category_id || category.id;
+              return (
+                <Link
+                  key={categoryId}
+                  to={`/category/${categoryId}`}
+                  className="text-sm text-gray-700 hover:text-[#3483FA] whitespace-nowrap transition-colors"
+                >
+                  {category.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

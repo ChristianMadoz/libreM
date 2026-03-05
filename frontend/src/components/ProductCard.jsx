@@ -1,23 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Truck } from 'lucide-react';
-import { getMockFavorites, setMockFavorites } from '../mock';
+import { useCart } from '../context/CartContext';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 
 const ProductCard = ({ product, onFavoriteChange }) => {
-  const favorites = getMockFavorites();
-  const isFavorite = favorites.some(fav => fav === product.id);
+  const { favorites, addFavorite, removeFavorite } = useCart();
+  const productId = product.product_id || product.id;
+  const isFavorite = favorites.some(fav => (fav.product_id || fav) === productId);
 
-  const toggleFavorite = (e) => {
+  const toggleFavorite = async (e) => {
     e.preventDefault();
-    let newFavorites;
     if (isFavorite) {
-      newFavorites = favorites.filter(fav => fav !== product.id);
+      await removeFavorite(productId);
     } else {
-      newFavorites = [...favorites, product.id];
+      await addFavorite(productId);
     }
-    setMockFavorites(newFavorites);
     if (onFavoriteChange) onFavoriteChange();
   };
 
@@ -29,7 +28,7 @@ const ProductCard = ({ product, onFavoriteChange }) => {
   };
 
   return (
-    <Link to={`/product/${product.id}`}>
+    <Link to={`/product/${productId}`}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 h-full border border-gray-200 rounded-lg">
         <div className="relative aspect-square overflow-hidden bg-white">
           <img
@@ -47,9 +46,8 @@ const ProductCard = ({ product, onFavoriteChange }) => {
             className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 hover:scale-110"
           >
             <Heart
-              className={`w-5 h-5 transition-colors ${
-                isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
-              }`}
+              className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                }`}
             />
           </button>
         </div>
@@ -87,11 +85,10 @@ const ProductCard = ({ product, onFavoriteChange }) => {
                 {[...Array(5)].map((_, i) => (
                   <svg
                     key={i}
-                    className={`w-3 h-3 ${
-                      i < Math.floor(product.rating)
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-300'
-                    }`}
+                    className={`w-3 h-3 ${i < Math.floor(product.rating)
+                      ? 'text-yellow-400 fill-yellow-400'
+                      : 'text-gray-300'
+                      }`}
                     viewBox="0 0 20 20"
                   >
                     <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />

@@ -100,26 +100,22 @@ const Checkout = () => {
       setLoading(true);
       setError(null);
 
-      let order;
-      try {
-        order = await ordersAPI.createOrder(shippingData, paymentData);
-      } catch (apiError) {
-        console.warn('Backend order failed, using mock');
-        // Generate a mock order
-        order = {
-          order_id: `mock_order_${Date.now()}`,
-          order_number: `ML-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-          items: cart.items,
-          shipping: shippingData,
-          total: cart.total,
-          status: 'confirmed',
-          created_at: new Date().toISOString()
-        };
+      const orderData = {
+        shipping: shippingData,
+        payment: {
+          method: 'credit_card',
+          last_four: paymentData.cardNumber.slice(-4)
+        },
+        items: cartItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.cart_quantity,
+          color: item.cart_color
+        })),
+        total: total
+      };
 
-        // Save to mock orders
-        const { getMockOrders, setMockOrders } = await import('../mock');
-        setMockOrders([order, ...getMockOrders()]);
-      }
+      const response = await orderActions.createOrder(orderData);
+      const order = response.order;
 
       await clearCart();
 
@@ -133,7 +129,7 @@ const Checkout = () => {
 
       toast({
         title: "¡Compra realizada!",
-        description: `Tu pedido ${order.order_number} ha sido confirmado.`,
+        description: `Tu pedido ${order.order_number || order.id} ha sido confirmado.`,
       });
 
     } catch (err) {

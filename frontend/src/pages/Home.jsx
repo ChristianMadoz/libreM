@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockProducts, mockCategories } from '../mock';
+import { productActions } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import * as Icons from 'lucide-react';
 
 const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [, setRefresh] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsData, categoriesData] = await Promise.all([
+          productActions.getProducts(),
+          productActions.getCategories()
+        ]);
+        setProducts(productsData.products || []);
+        setCategories(categoriesData.categories || []);
+      } catch (error) {
+        console.error('Error fetching home data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleFavoriteChange = () => {
     setRefresh(prev => prev + 1);
   };
 
-  const featuredProducts = mockProducts.slice(0, 6);
-  const techProducts = mockProducts.filter(p => p.categoryId === 1).slice(0, 4);
-  const homeProducts = mockProducts.filter(p => p.categoryId === 2).slice(0, 4);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
+
+  const featuredProducts = products.slice(0, 6);
+  const techProducts = products.filter(p => p.category_id === 1 || p.category === 'Tecnología').slice(0, 4);
+  const homeProducts = products.filter(p => p.category_id === 2 || p.category === 'Hogar y Muebles').slice(0, 4);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -52,12 +81,13 @@ const Home = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Categorías destacadas</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {mockCategories.slice(0, 10).map((category) => {
+          {categories.slice(0, 10).map((category) => {
             const IconComponent = Icons[category.icon];
+            const categoryId = category.category_id || category.id;
             return (
               <Link
-                key={category.id}
-                to={`/category/${category.id}`}
+                key={categoryId}
+                to={`/category/${categoryId}`}
                 className="bg-white rounded-lg p-6 text-center hover:shadow-md transition-all group"
               >
                 <div className="flex flex-col items-center gap-3">

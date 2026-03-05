@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const hasProcessed = useRef(false);
 
   useEffect(() => {
@@ -26,11 +26,11 @@ const AuthCallback = () => {
 
       try {
         // Exchange session_id for user data and set cookie
-        const user = await login(sessionId);
-        
+        const user = await loginWithGoogle(sessionId);
+
         // Clear the hash from URL
         window.history.replaceState(null, '', window.location.pathname);
-        
+
         // Redirect to home with user data
         navigate('/', { state: { user }, replace: true });
       } catch (error) {
@@ -40,7 +40,7 @@ const AuthCallback = () => {
     };
 
     processAuth();
-  }, [login, navigate]);
+  }, [loginWithGoogle, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

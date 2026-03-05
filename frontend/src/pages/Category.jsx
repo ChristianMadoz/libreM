@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockProducts, mockCategories } from '../mock';
+import { productActions } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import * as Icons from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -8,13 +8,45 @@ import { Button } from '../components/ui/button';
 const Category = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const category = mockCategories.find(c => c.id === parseInt(id));
-  const categoryProducts = mockProducts.filter(p => p.categoryId === parseInt(id));
+  const [category, setCategory] = useState(null);
+  const [categoryProducts, setCategoryProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [, setRefresh] = useState(0);
+
+  useEffect(() => {
+    const fetchCategoryData = async () => {
+      setLoading(true);
+      try {
+        const [categoriesResponse, productsResponse] = await Promise.all([
+          productActions.getCategories(),
+          productActions.getProducts({ category: id })
+        ]);
+
+        const foundCategory = categoriesResponse.categories.find(
+          c => (c.category_id || c.id) === parseInt(id)
+        );
+        setCategory(foundCategory);
+        setCategoryProducts(productsResponse.products || []);
+      } catch (error) {
+        console.error('Error fetching category data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategoryData();
+  }, [id]);
 
   const handleFavoriteChange = () => {
     setRefresh(prev => prev + 1);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
 
   if (!category) {
     return (
@@ -48,13 +80,16 @@ const Category = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {categoryProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {categoryProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onFavoriteChange={handleFavoriteChange}
-              />
-            ))}
+            {categoryProducts.map((product) => {
+              const productId = product.product_id || product.id;
+              return (
+                <ProductCard
+                  key={productId}
+                  product={product}
+                  onFavoriteChange={handleFavoriteChange}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-lg p-12 text-center">

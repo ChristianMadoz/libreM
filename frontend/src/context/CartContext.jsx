@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { cartAPI, favoritesAPI } from '../services/api';
+import { cartActions, favoriteActions } from '../services/api';
 import { useAuth } from './AuthContext';
 import { getMockCart, setMockCart, getMockFavorites, setMockFavorites, mockProducts } from '../mock';
 
@@ -49,19 +49,21 @@ export const CartProvider = ({ children }) => {
 
   const loadFavorites = async () => {
     try {
-      const data = await favoritesAPI.getFavorites();
-      setFavorites(data.favorites || []);
+      const data = await favoriteActions.getFavorites();
+      // data should contain {favorites: [...ids], products: [...products]}
+      setFavorites(data.products || []);
     } catch (error) {
       console.warn('Backend favorites failed, using mock');
       const localFavs = getMockFavorites();
-      setFavorites(localFavs.map(id => ({ product_id: id })));
+      const favProducts = mockProducts.filter(p => localFavs.includes(p.id));
+      setFavorites(favProducts.map(p => ({ ...p, product_id: p.id })));
     }
   };
 
   const loadCart = async () => {
     try {
-      const cartData = await cartAPI.getCart();
-      setCart(cartData);
+      const cartData = await cartActions.getCart();
+      setCart(cartData.cart); // api.js returns data directly, and getCart returns {cart: {...}}
     } catch (error) {
       console.warn('Backend cart failed, using mock');
       const localCartItems = getMockCart();
@@ -81,9 +83,9 @@ export const CartProvider = ({ children }) => {
   const addToCart = async (productId, quantity, color) => {
     if (isAuthenticated) {
       try {
-        const updatedCart = await cartAPI.addToCart(productId, quantity, color);
-        setCart(updatedCart);
-        return updatedCart;
+        const response = await cartActions.addToCart({ product_id: productId, quantity, color });
+        setCart(response.cart);
+        return response.cart;
       } catch (error) {
         console.warn('Failed to add to backend cart, fallback to mock');
       }
@@ -121,9 +123,9 @@ export const CartProvider = ({ children }) => {
   const updateCartItem = async (productId, quantity, color) => {
     if (isAuthenticated) {
       try {
-        const updatedCart = await cartAPI.updateCartItem(productId, quantity, color);
-        setCart(updatedCart);
-        return updatedCart;
+        const response = await cartActions.updateItem(productId, quantity, color);
+        setCart(response.cart);
+        return response.cart;
       } catch (error) {
         console.warn('Failed to update backend cart, fallback to mock');
       }
@@ -150,9 +152,9 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = async (productId, color) => {
     if (isAuthenticated) {
       try {
-        const updatedCart = await cartAPI.removeFromCart(productId, color);
-        setCart(updatedCart);
-        return updatedCart;
+        const response = await cartActions.removeItem(productId, color);
+        setCart(response.cart);
+        return response.cart;
       } catch (error) {
         console.warn('Failed to remove from backend cart, fallback to mock');
       }
@@ -175,7 +177,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = async () => {
     if (isAuthenticated) {
       try {
-        await cartAPI.clearCart();
+        await cartActions.clearCart();
       } catch (error) {
         console.warn('Failed to clear backend cart');
       }
@@ -187,8 +189,8 @@ export const CartProvider = ({ children }) => {
   const addFavorite = async (productId) => {
     if (isAuthenticated) {
       try {
-        const updatedFavs = await favoritesAPI.addFavorite(productId);
-        setFavorites(updatedFavs || []);
+        const response = await favoriteActions.addFavorite(productId);
+        setFavorites(response.favorites || []);
         return;
       } catch (error) {
         console.warn('Failed to add to backend favorites');
@@ -202,8 +204,8 @@ export const CartProvider = ({ children }) => {
   const removeFavorite = async (productId) => {
     if (isAuthenticated) {
       try {
-        const updatedFavs = await favoritesAPI.removeFavorite(productId);
-        setFavorites(updatedFavs || []);
+        const response = await favoriteActions.removeFavorite(productId);
+        setFavorites(response.favorites || []);
         return;
       } catch (error) {
         console.warn('Failed to remove from backend favorites');

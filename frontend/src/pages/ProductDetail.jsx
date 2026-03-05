@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockProducts } from '../mock';
+import { productActions } from '../services/api';
 import { Heart, Truck, ShoppingCart, Shield, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -16,12 +16,47 @@ const ProductDetail = () => {
   const { isAuthenticated } = useAuth();
   const { cart, addToCart: addToCartContext, favorites, addFavorite, removeFavorite } = useCart();
 
-  const product = mockProducts.find(p => p.id === parseInt(id));
-  const [selectedColor, setSelectedColor] = useState(product?.colors[0]);
+  const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  const isFavorite = favorites.some(fav => fav.product_id === product?.id);
+  useEffect(() => {
+    const fetchProductData = async () => {
+      setLoading(true);
+      try {
+        const productResponse = await productActions.getProduct(id);
+        const productData = productResponse.product;
+        setProduct(productData);
+        setSelectedColor(productData.colors?.length > 0 ? productData.colors[0] : null);
+
+        // Fetch related products from same category
+        if (productData.category_id) {
+          const relatedResponse = await productActions.getProducts({ category: productData.category_id });
+          setRelatedProducts(relatedResponse.products.filter(p => p.product_id !== id).slice(0, 4));
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProductData();
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  const productId = product?.product_id || product?.id;
+  const isFavorite = favorites.some(fav => (fav.product_id || fav) === productId);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -42,10 +77,10 @@ const ProductDetail = () => {
 
     try {
       if (isFavorite) {
-        await removeFavorite(product.id);
+        await removeFavorite(productId);
         toast({ title: 'Eliminado de favoritos' });
       } else {
-        await addFavorite(product.id);
+        await addFavorite(productId);
         toast({ title: 'Agregado a favoritos', description: product.name });
       }
     } catch (error) {
@@ -56,7 +91,7 @@ const ProductDetail = () => {
   const addToCart = async () => {
     setIsAdding(true);
     try {
-      await addToCartContext(product.id, quantity, selectedColor);
+      await addToCartContext(productId, quantity, selectedColor);
       toast({
         title: '¡Agregado al carrito!',
         description: `${quantity}x ${product.name}`
@@ -83,10 +118,6 @@ const ProductDetail = () => {
       currency: 'USD'
     }).format(price);
   };
-
-  const relatedProducts = mockProducts
-    .filter(p => p.categoryId === product.categoryId && p.id !== product.id)
-    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -308,30 +339,33 @@ const ProductDetail = () => {
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Productos relacionados</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
-                <Card
-                  key={relatedProduct.id}
-                  onClick={() => {
-                    navigate(`/product/${relatedProduct.id}`);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                >
-                  <img
-                    src={relatedProduct.image}
-                    alt={relatedProduct.name}
-                    className="w-full h-48 object-contain p-4"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-sm text-gray-800 mb-2 line-clamp-2">
-                      {relatedProduct.name}
-                    </h3>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {formatPrice(relatedProduct.price)}
-                    </p>
-                  </div>
-                </Card>
-              ))}
+              {relatedProducts.map((relatedProduct) => {
+                const relatedId = relatedProduct.product_id || relatedProduct.id;
+                return (
+                  <Card
+                    key={relatedId}
+                    onClick={() => {
+                      navigate(`/product/${relatedId}`);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                  >
+                    <img
+                      src={relatedProduct.image}
+                      alt={relatedProduct.name}
+                      className="w-full h-48 object-contain p-4"
+                    />
+                    <div className="p-4">
+                      <h3 className="text-sm text-gray-800 mb-2 line-clamp-2">
+                        {relatedProduct.name}
+                      </h3>
+                      <p className="text-xl font-semibold text-gray-900">
+                        {formatPrice(relatedProduct.price)}
+                      </p>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}

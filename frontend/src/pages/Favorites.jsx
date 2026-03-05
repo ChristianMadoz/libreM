@@ -1,21 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMockFavorites, mockProducts } from '../mock';
+import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import { Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const Favorites = () => {
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState(getMockFavorites());
+  const { favorites, loading } = useCart();
 
-  const handleFavoriteChange = () => {
-    setFavorites(getMockFavorites());
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3483FA]"></div>
+      </div>
+    );
+  }
 
-  const favoriteProducts = mockProducts.filter(p => favorites.includes(p.id));
-
-  if (favoriteProducts.length === 0) {
+  if (favorites.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -43,17 +45,19 @@ const Favorites = () => {
         <div className="flex items-center gap-3 mb-8">
           <Heart className="w-8 h-8 text-red-500" />
           <h1 className="text-3xl font-bold text-gray-900">Mis favoritos</h1>
-          <span className="text-gray-600">({favoriteProducts.length})</span>
+          <span className="text-gray-600">({favorites.length})</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {favoriteProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onFavoriteChange={handleFavoriteChange}
-            />
-          ))}
+          {favorites.map((product) => {
+            const productId = product.product_id || product.id;
+            return (
+              <ProductCard
+                key={productId}
+                product={product}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
