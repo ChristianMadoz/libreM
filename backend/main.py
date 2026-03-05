@@ -11,7 +11,7 @@ if current_dir not in sys.path:
 from database import get_db
 from config import settings
 import auth_helper
-from routers import auth
+from routers import auth, products, categories
 
 app = FastAPI()
 
