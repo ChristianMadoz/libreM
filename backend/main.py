@@ -5,10 +5,11 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import uuid
+import hashlib
 import logging
+import re
 from auth import get_session_user, exchange_session_id
 from config import settings
-from fastapi import APIRouter
 from database import get_db, engine, Base
 import db_models
 from models import (
@@ -17,29 +18,17 @@ from models import (
     CreateProductRequest
 )
 
-# Create database tables
-# Base.metadata.create_all(bind=engine)
-
-# Create the main app without a prefix
+# Create the main app
 app = FastAPI(title="LibreM API", version="1.0.0")
 
-# Configure CORS BEFORE adding routes (middleware order matters!)
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"https://.*\.insforge\.(app|site)",
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Create a router with the /api prefix
-api_router = APIRouter()
-
-@api_router.get("/health")
-def health_check():
-    return {"status": "ok", "db": "postgres"}
 
 # Configure logging
 logging.basicConfig(
@@ -48,9 +37,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ============= HEALTH =============
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "db": "postgres"}
+
 # ============= AUTH ENDPOINTS =============
 
-@api_router.post("/auth/google")
+@app.post("/api/auth/google")
 async def google_auth(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Exchange session_id from Google OAuth for user data and session_token
@@ -71,14 +66,12 @@ async def google_auth(request: Request, response: Response, db: Session = Depend
     
     if existing_user:
         user_id = existing_user.user_id
-        # Update user data if changed
         existing_user.name = auth_data["name"]
         existing_user.picture = auth_data.get("picture")
         existing_user.google_id = auth_data["id"]
         db.commit()
         favorites = existing_user.favorites or []
     else:
-        # Create new user with custom user_id
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         new_user = db_models.User(
             user_id=user_id,
@@ -133,13 +126,11 @@ async def google_auth(request: Request, response: Response, db: Session = Depend
         "token": session_token
     }
 
-@api_router.post("/auth/register")
+@app.post("/api/auth/register")
 async def register(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Register a new user with email and password
     """
-    import hashlib
-    
     body = await request.json()
     email = body.get("email")
     password = body.get("password")
@@ -149,7 +140,6 @@ async def register(request: Request, response: Response, db: Session = Depends(g
         raise HTTPException(status_code=400, detail="Email, password, and name are required")
     
     # Validate email format
-    import re
     email_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
     if not re.match(email_pattern, email):
         raise HTTPException(status_code=400, detail="Invalid email format")
@@ -162,8 +152,11 @@ async def register(request: Request, response: Response, db: Session = Depends(g
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Hash password
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    # Hash password with salt using hashlib (SHA-256 + salt)
+    salt = uuid.uuid4().hex
+    password_hash = hashlib.sha256((salt + password).encode()).hexdigest()
+    # Store salt:hash format
+    stored_hash = f"{salt}:{password_hash}"
     
     # Create new user
     user_id = f"user_{uuid.uuid4().hex[:12]}"
@@ -171,7 +164,7 @@ async def register(request: Request, response: Response, db: Session = Depends(g
         user_id=user_id,
         email=email,
         name=name,
-        password_hash=password_hash,
+        password_hash=stored_hash,
         picture=None,
         favorites=[],
         created_at=datetime.now(timezone.utc)
@@ -213,7 +206,87 @@ async def register(request: Request, response: Response, db: Session = Depends(g
         "token": session_token
     }
 
-@api_router.get("/auth/me")
+@app.post("/api/auth/login")
+async def login(request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Login user with email and password
+    """
+    body = await request.json()
+    email = body.get("email")
+    password = body.get("password")
+    
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    # Find user by email
+    user = db.query(db_models.User).filter(
+        db_models.User.email == email
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not user.password_hash:
+        raise HTTPException(status_code=401, detail="This account uses Google login. Please sign in with Google.")
+    
+    # Verify password - support both old (plain SHA-256) and new (salt:hash) formats
+    if ":" in user.password_hash:
+        # New format: salt:hash
+        salt, stored_hash = user.password_hash.split(":", 1)
+        computed_hash = hashlib.sha256((salt + password).encode()).hexdigest()
+        if computed_hash != stored_hash:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+    else:
+        # Legacy format: plain SHA-256 (migrate on successful login)
+        computed_hash = hashlib.sha256(password.encode()).hexdigest()
+        if computed_hash != user.password_hash:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        # Migrate to salted format
+        salt = uuid.uuid4().hex
+        new_hash = hashlib.sha256((salt + password).encode()).hexdigest()
+        user.password_hash = f"{salt}:{new_hash}"
+        db.commit()
+    
+    # Delete old sessions for this user
+    db.query(db_models.UserSession).filter(
+        db_models.UserSession.user_id == user.user_id
+    ).delete()
+    
+    # Create new session
+    session_token = uuid.uuid4().hex
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+    
+    new_session = db_models.UserSession(
+        user_id=user.user_id,
+        session_token=session_token,
+        expires_at=expires_at,
+        created_at=datetime.now(timezone.utc)
+    )
+    db.add(new_session)
+    db.commit()
+    
+    # Set secure httponly cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.SESSION_EXPIRY_DAYS * 24 * 60 * 60
+    )
+    
+    return {
+        "user": {
+            "user_id": user.user_id,
+            "email": user.email,
+            "name": user.name,
+            "picture": user.picture,
+            "favorites": user.favorites or []
+        },
+        "token": session_token
+    }
+
+@app.get("/api/auth/me")
 async def get_current_user(
     request: Request,
     db: Session = Depends(get_db)
@@ -224,7 +297,7 @@ async def get_current_user(
     user = await get_session_user(request, db)
     return user
 
-@api_router.post("/auth/logout")
+@app.post("/api/auth/logout")
 async def logout(
     request: Request,
     response: Response,
@@ -246,7 +319,7 @@ async def logout(
 
 # ============= PRODUCTS ENDPOINTS =============
 
-@api_router.get("/products")
+@app.get("/api/products")
 async def get_products(
     category: Optional[int] = None,
     search: Optional[str] = None,
@@ -289,7 +362,6 @@ async def get_products(
     
     products = query.limit(1000).all()
     
-    # Convert to dict
     products_list = [
         {
             "product_id": p.product_id,
@@ -316,7 +388,7 @@ async def get_products(
     
     return {"products": products_list}
 
-@api_router.get("/products/{product_id}")
+@app.get("/api/products/{product_id}")
 async def get_product(product_id: str, db: Session = Depends(get_db)):
     """
     Get product by ID
@@ -351,7 +423,7 @@ async def get_product(product_id: str, db: Session = Depends(get_db)):
         }
     }
 
-@api_router.post("/products")
+@app.post("/api/products")
 async def create_product(
     product_data: CreateProductRequest,
     db: Session = Depends(get_db)
@@ -359,7 +431,6 @@ async def create_product(
     """
     Create a new product
     """
-    # Generate a unique product_id
     product_id = f"MLB{uuid.uuid4().hex[:12].upper()}"
     
     new_product = db_models.Product(
@@ -372,7 +443,7 @@ async def create_product(
         category=product_data.category,
         category_id=product_data.category_id,
         free_shipping=product_data.free_shipping,
-        rating=5.0, # Default rating for new products
+        rating=5.0,
         reviews=0,
         sold=0,
         stock=product_data.stock,
@@ -389,8 +460,7 @@ async def create_product(
     
     return {"success": True, "product_id": product_id, "product": product_data}
 
-
-@api_router.get("/categories")
+@app.get("/api/categories")
 async def get_categories(db: Session = Depends(get_db)):
     """
     Get all categories
@@ -410,7 +480,7 @@ async def get_categories(db: Session = Depends(get_db)):
 
 # ============= CART ENDPOINTS =============
 
-@api_router.get("/cart")
+@app.get("/api/cart")
 async def get_cart(
     request: Request,
     db: Session = Depends(get_db)
@@ -427,7 +497,6 @@ async def get_cart(
     if not cart:
         return {"cart": {"items": [], "total": 0}}
     
-    # Get cart items with product details
     items_with_details = []
     total = 0
     
@@ -467,7 +536,7 @@ async def get_cart(
         }
     }
 
-@api_router.post("/cart")
+@app.post("/api/cart")
 async def add_to_cart(
     cart_item: AddToCartRequest,
     request: Request,
@@ -478,7 +547,6 @@ async def add_to_cart(
     """
     user = await get_session_user(request, db)
     
-    # Check if product exists and has stock
     product = db.query(db_models.Product).filter(
         db_models.Product.product_id == cart_item.product_id
     ).first()
@@ -489,7 +557,6 @@ async def add_to_cart(
     if product.stock < cart_item.quantity:
         raise HTTPException(status_code=400, detail="Insufficient stock")
     
-    # Get or create cart
     cart = db.query(db_models.Cart).filter(
         db_models.Cart.user_id == user["user_id"]
     ).first()
@@ -503,7 +570,6 @@ async def add_to_cart(
         db.commit()
         db.refresh(cart)
     
-    # Check if item already exists in cart
     existing_item = db.query(db_models.CartItem).filter(
         db_models.CartItem.cart_id == cart.cart_id,
         db_models.CartItem.product_id == cart_item.product_id,
@@ -511,13 +577,11 @@ async def add_to_cart(
     ).first()
     
     if existing_item:
-        # Update quantity
         new_quantity = existing_item.quantity + cart_item.quantity
         if product.stock < new_quantity:
             raise HTTPException(status_code=400, detail="Insufficient stock")
         existing_item.quantity = new_quantity
     else:
-        # Add new item
         new_cart_item = db_models.CartItem(
             cart_id=cart.cart_id,
             product_id=cart_item.product_id,
@@ -530,10 +594,9 @@ async def add_to_cart(
     cart.updated_at = datetime.now(timezone.utc)
     db.commit()
     
-    # Return updated cart
     return await get_cart(request, db)
 
-@api_router.put("/cart/{product_id}")
+@app.put("/api/cart/{product_id}")
 async def update_cart_item(
     product_id: str,
     update_data: UpdateCartRequest,
@@ -549,7 +612,6 @@ async def update_cart_item(
     if update_data.quantity < 1:
         raise HTTPException(status_code=400, detail="Quantity must be at least 1")
     
-    # Check stock
     product = db.query(db_models.Product).filter(
         db_models.Product.product_id == product_id
     ).first()
@@ -560,7 +622,6 @@ async def update_cart_item(
     if product.stock < update_data.quantity:
         raise HTTPException(status_code=400, detail="Insufficient stock")
     
-    # Get cart
     cart = db.query(db_models.Cart).filter(
         db_models.Cart.user_id == user["user_id"]
     ).first()
@@ -568,7 +629,6 @@ async def update_cart_item(
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
     
-    # Find and update item
     cart_item = db.query(db_models.CartItem).filter(
         db_models.CartItem.cart_id == cart.cart_id,
         db_models.CartItem.product_id == product_id,
@@ -584,7 +644,7 @@ async def update_cart_item(
     
     return await get_cart(request, db)
 
-@api_router.delete("/cart/{product_id}")
+@app.delete("/api/cart/{product_id}")
 async def remove_from_cart(
     product_id: str,
     request: Request,
@@ -603,7 +663,6 @@ async def remove_from_cart(
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
     
-    # Remove item
     db.query(db_models.CartItem).filter(
         db_models.CartItem.cart_id == cart.cart_id,
         db_models.CartItem.product_id == product_id,
@@ -615,7 +674,7 @@ async def remove_from_cart(
     
     return await get_cart(request, db)
 
-@api_router.delete("/cart")
+@app.delete("/api/cart")
 async def clear_cart(
     request: Request,
     db: Session = Depends(get_db)
@@ -634,7 +693,7 @@ async def clear_cart(
 
 # ============= FAVORITES ENDPOINTS =============
 
-@api_router.get("/favorites")
+@app.get("/api/favorites")
 async def get_favorites(
     request: Request,
     db: Session = Depends(get_db)
@@ -650,7 +709,6 @@ async def get_favorites(
     
     favorites = user.favorites or []
     
-    # Get product details
     products = []
     for product_id in favorites:
         product = db.query(db_models.Product).filter(
@@ -680,7 +738,7 @@ async def get_favorites(
     
     return {"favorites": favorites, "products": products}
 
-@api_router.post("/favorites/{product_id}")
+@app.post("/api/favorites/{product_id}")
 async def add_favorite(
     product_id: str,
     request: Request,
@@ -691,7 +749,6 @@ async def add_favorite(
     """
     user_data = await get_session_user(request, db)
     
-    # Check if product exists
     product = db.query(db_models.Product).filter(
         db_models.Product.product_id == product_id
     ).first()
@@ -699,12 +756,10 @@ async def add_favorite(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # Get user
     user = db.query(db_models.User).filter(
         db_models.User.user_id == user_data["user_id"]
     ).first()
     
-    # Add to favorites if not already there
     favorites = user.favorites or []
     if product_id not in favorites:
         favorites.append(product_id)
@@ -713,7 +768,7 @@ async def add_favorite(
     
     return {"favorites": favorites}
 
-@api_router.delete("/favorites/{product_id}")
+@app.delete("/api/favorites/{product_id}")
 async def remove_favorite(
     product_id: str,
     request: Request,
@@ -738,7 +793,7 @@ async def remove_favorite(
 
 # ============= ORDERS ENDPOINTS =============
 
-@api_router.post("/orders")
+@app.post("/api/orders")
 async def create_order(
     order_data: CreateOrderRequest,
     request: Request,
@@ -749,7 +804,6 @@ async def create_order(
     """
     user = await get_session_user(request, db)
     
-    # Get cart
     cart = db.query(db_models.Cart).filter(
         db_models.Cart.user_id == user["user_id"]
     ).first()
@@ -757,7 +811,6 @@ async def create_order(
     if not cart or not cart.items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     
-    # Build order items and calculate total
     order_items = []
     total = 0
     
@@ -767,7 +820,6 @@ async def create_order(
         if not product:
             continue
         
-        # Check stock
         if product.stock < cart_item.quantity:
             raise HTTPException(
                 status_code=400,
@@ -786,11 +838,9 @@ async def create_order(
             "image": product.image
         })
         
-        # Reduce stock
         product.stock -= cart_item.quantity
         product.sold += cart_item.quantity
     
-    # Create order
     order_id = f"order_{uuid.uuid4().hex[:12]}"
     order_number = f"ML-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
     
@@ -807,7 +857,6 @@ async def create_order(
     
     db.add(new_order)
     
-    # Clear cart
     db.query(db_models.Cart).filter(
         db_models.Cart.user_id == user["user_id"]
     ).delete()
@@ -828,7 +877,7 @@ async def create_order(
         }
     }
 
-@api_router.get("/orders")
+@app.get("/api/orders")
 async def get_orders(
     request: Request,
     db: Session = Depends(get_db)
@@ -858,7 +907,7 @@ async def get_orders(
     
     return {"orders": orders_list}
 
-@api_router.get("/orders/{order_id}")
+@app.get("/api/orders/{order_id}")
 async def get_order(
     order_id: str,
     request: Request,
@@ -889,8 +938,3 @@ async def get_order(
             "created_at": order.created_at.isoformat()
         }
     }
-
-# Include the router in the main app
-# Include the router twice to handle both cases (gateway stripping prefix or not)
-app.include_router(api_router, prefix="/api")
-app.include_router(api_router)

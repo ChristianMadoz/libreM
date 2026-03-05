@@ -3,38 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { insforge } from '../lib/insforge';
 import { toast } from 'sonner';
 import { Camera, Loader2 } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading, logout, checkAuth } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
     const [editing, setEditing] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [profileData, setProfileData] = useState(null);
-    const fileInputRef = useRef(null);
     const [formData, setFormData] = useState({
         name: '',
         email: ''
     });
 
-    const fetchInsforgeProfile = React.useCallback(async () => {
-        if (!user?.user_id) return;
-
-        const { data, error } = await insforge.database
-            .from('profiles')
-            .select('*')
-            .eq('id', user.user_id)
-            .single();
-
-        if (data) {
-            setProfileData(data);
-        }
-    }, [user?.user_id]);
-
     useEffect(() => {
-        // Wait for auth to finish loading before making decisions
         if (authLoading) return;
 
         if (!isAuthenticated) {
@@ -47,57 +28,8 @@ const Profile = () => {
                 name: user.name || '',
                 email: user.email || ''
             });
-            fetchInsforgeProfile();
         }
-    }, [isAuthenticated, authLoading, user, navigate, fetchInsforgeProfile]);
-
-    const handleImageUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Check file type
-        if (!file.type.startsWith('image/')) {
-            toast.error('Por favor selecciona una imagen válida');
-            return;
-        }
-
-        // Check file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error('La imagen es muy pesada (máximo 2MB)');
-            return;
-        }
-
-        setUploading(true);
-        try {
-            // 1. Upload to InsForge Storage
-            const fileName = `${user.user_id}/${Date.now()}-${file.name}`;
-            const { data: uploadData, error: uploadError } = await insforge.storage
-                .from('profiles')
-                .upload(fileName, file);
-
-            if (uploadError) throw uploadError;
-
-            // 2. Update/Insert in profiles table
-            const { error: dbError } = await insforge.database
-                .from('profiles')
-                .upsert({
-                    id: user.user_id,
-                    avatar_url: uploadData.url,
-                    avatar_key: uploadData.key,
-                    updated_at: new Date().toISOString(),
-                });
-
-            if (dbError) throw dbError;
-
-            toast.success('Imagen de perfil actualizada');
-            fetchInsforgeProfile();
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            toast.error('No se pudo subir la imagen');
-        } finally {
-            setUploading(false);
-        }
-    };
+    }, [isAuthenticated, authLoading, user, navigate]);
 
     const handleLogout = async () => {
         await logout();
@@ -112,7 +44,7 @@ const Profile = () => {
         );
     }
 
-    const currentProfileImage = profileData?.avatar_url || user.picture || 'https://github.com/shadcn.png';
+    const currentProfileImage = user.picture || 'https://github.com/shadcn.png';
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -123,7 +55,7 @@ const Profile = () => {
                     {/* Profile Information */}
                     <Card className="p-6">
                         <div className="flex items-start justify-between mb-6">
-                            <h2 className="text-xl font-semibold text-gray-900">Información Personal</h2>
+                            <h2 className="text-xl font-semibold text-gray-900">Informacion Personal</h2>
                             <Button
                                 variant="outline"
                                 onClick={() => setEditing(!editing)}
@@ -138,24 +70,6 @@ const Profile = () => {
                                     src={currentProfileImage}
                                     alt={user.name}
                                     className="w-24 h-24 rounded-full border-2 border-gray-200 object-cover"
-                                />
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading}
-                                    className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
-                                >
-                                    {uploading ? (
-                                        <Loader2 className="w-8 h-8 text-white animate-spin" />
-                                    ) : (
-                                        <Camera className="w-8 h-8 text-white" />
-                                    )}
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                    accept="image/*"
                                 />
                             </div>
                             <div>
@@ -210,7 +124,7 @@ const Profile = () => {
 
                     {/* Account Stats */}
                     <Card className="p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Estadísticas de Cuenta</h2>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Estadisticas de Cuenta</h2>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="text-center p-4 bg-blue-50 rounded-lg">
                                 <p className="text-3xl font-bold text-[#3483FA]">{user.favorites?.length || 0}</p>
@@ -222,35 +136,35 @@ const Profile = () => {
                             </div>
                             <div className="text-center p-4 bg-purple-50 rounded-lg">
                                 <p className="text-3xl font-bold text-purple-600">0</p>
-                                <p className="text-sm text-gray-600 mt-1">Reseñas</p>
+                                <p className="text-sm text-gray-600 mt-1">Resenas</p>
                             </div>
                         </div>
                     </Card>
 
                     {/* Quick Actions */}
                     <Card className="p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rapidas</h2>
                         <div className="grid gap-3">
                             <Button
                                 variant="outline"
                                 className="justify-start"
                                 onClick={() => navigate('/orders')}
                             >
-                                📦 Ver mis pedidos
+                                Ver mis pedidos
                             </Button>
                             <Button
                                 variant="outline"
                                 className="justify-start"
                                 onClick={() => navigate('/favorites')}
                             >
-                                ❤️ Ver mis favoritos
+                                Ver mis favoritos
                             </Button>
                             <Button
                                 variant="outline"
                                 className="justify-start text-red-600 hover:bg-red-50"
                                 onClick={handleLogout}
                             >
-                                🚪 Cerrar sesión
+                                Cerrar sesion
                             </Button>
                         </div>
                     </Card>

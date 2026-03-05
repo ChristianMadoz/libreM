@@ -1,6 +1,6 @@
 """
 Configuration management with environment variables
-All secrets and credentials loaded from .env file - NEVER hardcoded
+All secrets and credentials loaded from environment - NEVER hardcoded
 """
 import os
 from dotenv import load_dotenv
@@ -15,7 +15,6 @@ class Settings:
     """
     
     # Database Connections
-    # Prioritize DATABASE_URL, construct from components if missing
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     
     # PostgreSQL Details (fallback construction)
@@ -34,13 +33,10 @@ class Settings:
     OAUTH_CLIENT_SECRET: str = os.getenv("OAUTH_CLIENT_SECRET", "")
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        # Developement fallback for convenience, DO NOT USE IN PROD without env var
-        SECRET_KEY = "dev_secret_key_change_me" 
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev_secret_key_change_me")
     
     # CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://ciyndj73.us-east.insforge.app")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
@@ -57,23 +53,21 @@ class Settings:
         """
         origins = [
             "http://localhost:3000",
+            "http://localhost:5173",
             "http://127.0.0.1:3000",
-            self.FRONTEND_URL,
-            "https://ciyndj73.insforge.site"
+            "http://127.0.0.1:5173",
         ]
         
-        # Add production domain if valid
+        # Add configured frontend URL
         if self.FRONTEND_URL and self.FRONTEND_URL.startswith("http"):
-             origins.append(self.FRONTEND_URL)
-             
-        # Add current InsForge domain if available
-        # You might need to add specific insforge domains here if they change dynamically
-        origins.append("https://ciyndj73.us-east.insforge.app") 
-        origins.append("https://ciyndj73.insforge.site") 
+            origins.append(self.FRONTEND_URL)
         
-        return list(set(origins)) # Remove duplicates
-
-
+        # Add Vercel preview URLs
+        vercel_url = os.getenv("VERCEL_URL", "")
+        if vercel_url:
+            origins.append(f"https://{vercel_url}")
+        
+        return list(set(origins))
     
     # Cookie settings
     @property
@@ -91,16 +85,12 @@ settings = Settings()
 
 # Validate critical settings on import
 def validate_settings():
-    """Validar que la base de datos esté configurada"""
+    """Validate database configuration"""
     if not settings.DATABASE_URL:
-        # Fallack for local dev if not set
-        print("WARNING: DATABASE_URL not found in env, using local default")
-        # Usar la cadena completa para que funcione la conexión
-        settings.DATABASE_URL = "postgresql://postgres:eca71ec8ff16ce808ef35cf63598b488@ciyndj73.us-east.database.insforge.app:5432/insforge?sslmode=require"
+        print("WARNING: DATABASE_URL not found in environment variables. Database operations will fail.")
 
 # Run validation
 validate_settings()
 
 if settings.DATABASE_URL and settings.DATABASE_URL.startswith("postgres://"):
     settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-

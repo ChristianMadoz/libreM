@@ -1,35 +1,29 @@
 # Agent Notes & Context
 
-Este archivo contiene notas de contexto para el agente AI (Antigravity) y reglas específicas del proyecto.
+## Project Structure
 
-## 🤖 Identidad y Rol
+This is a multi-service project using Vercel's `experimentalServices`:
+- **Frontend**: React (Vite) SPA in `/frontend`
+- **Backend**: FastAPI in `/backend` (entry point: `main.py`)
+- **Root**: `vercel.json` defines service routing
 
-- **Rol**: Agente de Desarrollo Full Stack Senior.
-- **Objetivo**: Completar la migración de un clon de Mercado Libre de Mocks a Producción.
+## Architecture
 
-## 📍 Reglas del Proyecto
+- Frontend calls `/api/...` endpoints (same origin, no CORS needed in dev)
+- Backend uses SQLAlchemy + PostgreSQL
+- Auth: Session-based with httponly cookies + Bearer token fallback
+- Password hashing: salted SHA-256 (salt:hash format)
 
-1. **Prioridad de Archivos**:
-   - `contracts.md`: Fuente de verdad para la API.
-   - `ROADMAP.md`: Fuente de verdad para el progreso.
-   - `task.md`: (Interno) Para tracking granular de sesiones.
+## Backend
 
-2. **Backend (FastAPI)**:
-   - Mantener consistencia con Pydantic models.
-   - Usar `motor` para todas las operaciones de BD (asíncrono).
-   - No hardcodear credenciales, usar `.env`.
+- Entry point: `backend/main.py` (FastAPI app)
+- All routes prefixed with `/api/` (e.g. `/api/health`, `/api/auth/login`)
+- Dependencies managed via `pyproject.toml`
+- Database config via `DATABASE_URL` environment variable
 
-3. **Frontend (React)**:
-   - Usar Tailwind CSS para estilos.
-   - Componentes funcionales con Hooks.
-   - Mantener la separación de lógica en servicios API.
+## Frontend
 
-## 📝 Notas de Implementación
-
-- **Seed Data**: Existe un script `backend/seed.py`. Debe ejecutarse al iniciar configuración de BD nueva.
-- **Auth**: El sistema usa Emergent Auth (Google). No modificar el flujo de tokens sin consultar `server.py`.
-
-## 🔄 Comandos Comunes
-
-- Backend: `uvicorn server:app --reload`
-- Frontend: `npm start` o `yarn start`
+- Built with Vite + React
+- Uses shadcn/ui components, Tailwind CSS
+- API service in `src/services/api.js`
+- Auth context in `src/context/AuthContext.jsx`
