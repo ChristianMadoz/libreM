@@ -1,9 +1,39 @@
+print("--- MAIN.PY STARTING ---")
+import os
+import sys
+
+# Get the directory of the current file
+current_dir = os.path.dirname(os.path.abspath(__file__))
+print(f"Current dir: {current_dir}")
+print(f"Directory contents: {os.listdir(current_dir)}")
+
+if current_dir not in sys.path:
+    print(f"Adding {current_dir} to sys.path")
+    sys.path.insert(0, current_dir)
+
+print("Attempting to import FastAPI...")
 from fastapi import FastAPI, APIRouter, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-from database import get_db
-from config import settings
-from routers import auth, products, categories, cart, favorites, orders
+
+print("Attempting to import database and config...")
+try:
+    from database import get_db
+    from config import settings
+    print("Database and config imported successfully")
+except Exception as e:
+    print(f"CRITICAL ERROR importing database/config: {str(e)}")
+    import traceback
+    traceback.print_exc()
+
+print("Attempting to import routers...")
+try:
+    from routers import auth, products, categories, cart, favorites, orders
+    print("Routers imported successfully")
+except Exception as e:
+    print(f"CRITICAL ERROR importing routers: {str(e)}")
+    import traceback
+    traceback.print_exc()
 
 # Configure logging
 logging.basicConfig(
