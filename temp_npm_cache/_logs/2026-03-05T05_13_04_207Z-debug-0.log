@@ -1,0 +1,22 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\ch\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.9.0
+2 info using node@v24.13.0
+3 silly config load:file:C:\Users\ch\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\ch\libreM\.npmrc
+5 silly config load:file:C:\Users\ch\.npmrc
+6 silly config load:file:C:\Users\ch\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm exec @insforge/mcp@latest --api_key ik_8e7dff5e049a78b09c585d21a7df1b0e --api_base_url https://ciyndj73.us-east.insforge.app
+8 verbose argv "exec" "--yes" "--" "@insforge/mcp@latest" "--api_key" "ik_8e7dff5e049a78b09c585d21a7df1b0e" "--api_base_url" "https://ciyndj73.us-east.insforge.app"
+9 verbose logfile logs-max:10 dir:C:\Users\ch\libreM\temp_npm_cache\_logs\2026-03-05T05_13_04_207Z-
+10 verbose logfile C:\Users\ch\libreM\temp_npm_cache\_logs\2026-03-05T05_13_04_207Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 http fetch GET 200 https://registry.npmjs.org/@insforge%2fmcp 1149ms (cache revalidated)
+14 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+15 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+16 verbose cwd C:\Users\ch\libreM
+17 verbose os Windows_NT 10.0.19045
+18 verbose node v24.13.0
+19 verbose npm  v11.9.0
+20 verbose exit 1
+21 verbose code 1

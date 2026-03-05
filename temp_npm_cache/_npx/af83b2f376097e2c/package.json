@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@insforge/mcp": "^1.2.6"
+  },
+  "_npx": {
+    "packages": [
+      "@insforge/mcp@latest"
+    ]
+  }
+}
