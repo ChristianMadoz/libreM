@@ -96,13 +96,19 @@ async def register(reg_data: UserRegister, response: Response, db: Session = Dep
     """
     Register a new user with email and password
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     email = reg_data.email
     password = reg_data.password
     name = reg_data.name
     
+    logger.info(f"Attempting to register user: {email}")
+    
     # Validate email format
     email_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
     if not re.match(email_pattern, email):
+        logger.warning(f"Invalid email format: {email}")
         raise HTTPException(status_code=400, detail="Invalid email format")
     
     # Check if user already exists
@@ -111,58 +117,63 @@ async def register(reg_data: UserRegister, response: Response, db: Session = Dep
     ).first()
     
     if existing_user:
+        logger.warning(f"Registration failed: Email {email} already exists")
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Hash password
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
-    # Create new user
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    new_user = db_models.User(
-        user_id=user_id,
-        email=email,
-        name=name,
-        password_hash=password_hash,
-        picture=None,
-        favorites=[],
-        created_at=datetime.now(timezone.utc)
-    )
-    db.add(new_user)
-    db.commit()
-    
-    # Create session
-    session_token = uuid.uuid4().hex
-    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
-    
-    new_session = db_models.UserSession(
-        user_id=user_id,
-        session_token=session_token,
-        expires_at=expires_at,
-        created_at=datetime.now(timezone.utc)
-    )
-    db.add(new_session)
-    db.commit()
-    
-    # Set secure httponly cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE,
-        max_age=settings.SESSION_EXPIRY_DAYS * 24 * 60 * 60
-    )
-    
-    return {
-        "user": {
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "picture": None,
-            "favorites": []
-        },
-        "token": session_token
-    }
+    try:
+        # Hash password
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # Create new user
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        new_user = db_models.User(
+            user_id=user_id,
+            email=email,
+            name=name,
+            password_hash=password_hash,
+            picture=None,
+            favorites=[],
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        logger.info(f"User created successfully: {user_id}")
+        
+        # Create session
+        session_token = uuid.uuid4().hex
+        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+        
+        new_session = db_models.UserSession(
+            user_id=user_id,
+            session_token=session_token,
+            expires_at=expires_at,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(new_session)
+        db.commit()
+        
+        logger.info(f"Session created for user: {user_id}")
+        
+        # Set secure httponly cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            max_age=settings.SESSION_EXPIRY_DAYS * 24 * 60 * 60
+        )
+        
+        return {
+            "user": new_user,
+            "token": session_token
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error during registration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/me", response_model=User)
 async def get_current_user(
