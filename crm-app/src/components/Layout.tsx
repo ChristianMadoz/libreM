@@ -1,6 +1,8 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, BriefcaseMenu } from "lucide-react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { LayoutDashboard, Users, Building2, BriefcaseMenu, LogOut, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { insforge } from "../lib/insforge";
+import { useState, useEffect } from "react";
 
 const navItems = [
     { icon: LayoutDashboard, label: "Deals", path: "/" },
@@ -10,6 +12,43 @@ const navItems = [
 
 export function Layout() {
     const location = useLocation();
+    const navigate = useNavigate();
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data } = await insforge.auth.getCurrentSession();
+            if (!data?.session) {
+                navigate("/auth");
+            } else {
+                setUser(data.session.user);
+            }
+            setLoading(false);
+        };
+        checkAuth();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        await insforge.auth.signOut();
+        navigate("/auth");
+    };
+
+    if (loading) {
+        return (
+            <div className="h-screen bg-neutral-950 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!user) return null;
+
+    const initials = user.profile?.name
+        ?.split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase() || user.email[0].toUpperCase();
 
     return (
         <div className="flex h-screen bg-neutral-950 text-neutral-100 font-sans">
@@ -42,16 +81,23 @@ export function Layout() {
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-neutral-800">
+                <div className="p-4 border-t border-neutral-800 space-y-4">
                     <div className="flex items-center gap-3 px-3 py-2">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold shadow-lg">
-                            CH
+                            {initials}
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-medium">Christian</span>
-                            <span className="text-xs text-neutral-500">Workspace Owner</span>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate">{user.profile?.name || "User"}</span>
+                            <span className="text-xs text-neutral-500 truncate">{user.email}</span>
                         </div>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                    </button>
                 </div>
             </aside>
 
