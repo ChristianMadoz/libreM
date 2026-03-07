@@ -19,7 +19,17 @@ type Deal = {
 
 export function DealsPage() {
     const [deals, setDeals] = useState<Deal[]>([]);
+    const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
+    const [contacts, setContacts] = useState<{id: string, first_name: string, last_name: string}[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false);
+
+    // New deal form state
+    const [title, setTitle] = useState("");
+    const [value, setValue] = useState("");
+    const [companyId, setCompanyId] = useState("");
+    const [contactId, setContactId] = useState("");
+    const [expectedCloseDate, setExpectedCloseDate] = useState("");
 
     const fetchDeals = async () => {
         setLoading(true);
@@ -33,9 +43,49 @@ export function DealsPage() {
         setLoading(false);
     };
 
+    const fetchMetadata = async () => {
+        const [compRes, contRes] = await Promise.all([
+            insforge.database.from("companies").select("id, name").order("name"),
+            insforge.database.from("contacts").select("id, first_name, last_name").order("first_name")
+        ]);
+        if (compRes.data) setCompanies(compRes.data);
+        if (contRes.data) setContacts(contRes.data);
+    };
+
     useEffect(() => {
         fetchDeals();
+        fetchMetadata();
     }, []);
+
+    const handleAddDeal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { error } = await insforge.database
+            .from("deals")
+            .insert([{
+                title,
+                value: Number(value),
+                company_id: companyId || null,
+                contact_id: contactId || null,
+                expected_close_date: expectedCloseDate || null,
+                stage: "Lead"
+            }]);
+
+        if (!error) {
+            setTitle("");
+            setValue("");
+            setCompanyId("");
+            setContactId("");
+            setExpectedCloseDate("");
+            setIsAdding(false);
+            fetchDeals();
+        }
+    };
+
+    const deleteDeal = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this deal?")) return;
+        const { error } = await insforge.database.from("deals").delete().eq("id", id);
+        if (!error) fetchDeals();
+    };
 
     const moveDeal = async (dealId: string, newStage: string) => {
         // Optimistic UI update
@@ -55,7 +105,10 @@ export function DealsPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Deals Pipeline</h2>
                     <p className="text-neutral-400">Manage your active sales opportunities.</p>
                 </div>
-                <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                <button 
+                    onClick={() => setIsAdding(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
                     <Plus className="w-5 h-5" />
                     Add Deal
                 </button>
@@ -103,8 +156,11 @@ export function DealsPage() {
                                                 <h4 className="font-semibold text-neutral-100 text-sm line-clamp-2 leading-tight">
                                                     {deal.title}
                                                 </h4>
-                                                <button className="text-neutral-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <MoreHorizontal className="w-4 h-4" />
+                                                <button 
+                                                    onClick={(e) => { e.preventDefault(); deleteDeal(deal.id); }}
+                                                    className="text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                >
+                                                    <span className="text-[10px]">Del</span>
                                                 </button>
                                             </div>
 
@@ -160,6 +216,91 @@ export function DealsPage() {
                     );
                 })}
             </div>
+
+            {/* Add Deal Modal */}
+            {isAdding && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-neutral-800 w-full max-w-lg rounded-2xl shadow-2xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-6">Create New Deal</h3>
+                        <form onSubmit={handleAddDeal} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Deal Title</label>
+                                <input
+                                    autoFocus
+                                    required
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="Software Subscription Renewal"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Value ($)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        value={value}
+                                        onChange={(e) => setValue(e.target.value)}
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        placeholder="5000"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Expected Close</label>
+                                    <input
+                                        type="date"
+                                        value={expectedCloseDate}
+                                        onChange={(e) => setExpectedCloseDate(e.target.value)}
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Related Company</label>
+                                <select
+                                    value={companyId}
+                                    onChange={(e) => setCompanyId(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
+                                >
+                                    <option value="">Select a company...</option>
+                                    {companies.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Primary Contact</label>
+                                <select
+                                    value={contactId}
+                                    onChange={(e) => setContactId(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
+                                >
+                                    <option value="">Select a contact...</option>
+                                    {contacts.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAdding(false)}
+                                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all font-semibold shadow-lg shadow-indigo-600/20"
+                                >
+                                    Create Deal
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

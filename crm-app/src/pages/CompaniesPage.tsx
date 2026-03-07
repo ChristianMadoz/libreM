@@ -13,6 +13,10 @@ export function CompaniesPage() {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [newIndustry, setNewIndustry] = useState("");
+    const [newWebsite, setNewWebsite] = useState("");
 
     const fetchCompanies = async () => {
         setLoading(true);
@@ -31,6 +35,37 @@ export function CompaniesPage() {
         fetchCompanies();
     }, []);
 
+    const handleAddCompany = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { error } = await insforge.database
+            .from("companies")
+            .insert([{ 
+                name: newName, 
+                industry: newIndustry, 
+                website: newWebsite 
+            }]);
+
+        if (!error) {
+            setNewName("");
+            setNewIndustry("");
+            setNewWebsite("");
+            setIsAdding(false);
+            fetchCompanies();
+        }
+    };
+
+    const deleteCompany = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this company?")) return;
+        const { error } = await insforge.database
+            .from("companies")
+            .delete()
+            .eq("id", id);
+        
+        if (!error) {
+            fetchCompanies();
+        }
+    };
+
     const filtered = companies.filter((c) =>
         c.name.toLowerCase().includes(search.toLowerCase())
     );
@@ -42,7 +77,10 @@ export function CompaniesPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Companies</h2>
                     <p className="text-neutral-400">Accounts and organizations you do business with.</p>
                 </div>
-                <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                <button 
+                    onClick={() => setIsAdding(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
                     <Plus className="w-5 h-5" />
                     Add Company
                 </button>
@@ -69,6 +107,7 @@ export function CompaniesPage() {
                                 <th className="px-6 py-4 font-medium text-neutral-400">Company Name</th>
                                 <th className="px-6 py-4 font-medium text-neutral-400">Industry</th>
                                 <th className="px-6 py-4 font-medium text-neutral-400">Website</th>
+                                <th className="px-6 py-4 font-medium text-neutral-400 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-800/50">
@@ -106,6 +145,14 @@ export function CompaniesPage() {
                                                 </a>
                                             ) : "—"}
                                         </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={() => deleteCompany(company.id)}
+                                                className="text-neutral-500 hover:text-red-400 transition-colors p-1"
+                                            >
+                                                <span className="text-xs">Delete</span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -113,6 +160,61 @@ export function CompaniesPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Add Company Modal */}
+            {isAdding && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-neutral-800 w-full max-w-md rounded-2xl shadow-2xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-4">Add New Company</h3>
+                        <form onSubmit={handleAddCompany} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Company Name</label>
+                                <input
+                                    autoFocus
+                                    required
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="Acme Corp"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Industry</label>
+                                <input
+                                    value={newIndustry}
+                                    onChange={(e) => setNewIndustry(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="Technology"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Website</label>
+                                <input
+                                    value={newWebsite}
+                                    onChange={(e) => setNewWebsite(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="www.acme.com"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAdding(false)}
+                                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all font-semibold shadow-lg shadow-indigo-600/20"
+                                >
+                                    Save Company
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

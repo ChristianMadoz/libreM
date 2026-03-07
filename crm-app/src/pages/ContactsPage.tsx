@@ -14,8 +14,17 @@ type Contact = {
 
 export function ContactsPage() {
     const [contacts, setContacts] = useState<Contact[]>([]);
+    const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false);
+    
+    // New contact form state
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [companyId, setCompanyId] = useState("");
 
     const fetchContacts = async () => {
         setLoading(true);
@@ -30,9 +39,48 @@ export function ContactsPage() {
         setLoading(false);
     };
 
+    const fetchCompanies = async () => {
+        const { data } = await insforge.database
+            .from("companies")
+            .select("id, name")
+            .order("name");
+        if (data) setCompanies(data);
+    };
+
     useEffect(() => {
         fetchContacts();
+        fetchCompanies();
     }, []);
+
+    const handleAddContact = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { error } = await insforge.database
+            .from("contacts")
+            .insert([{
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                phone,
+                company_id: companyId || null,
+                tags: []
+            }]);
+
+        if (!error) {
+            setFirstName("");
+            setLastName("");
+            setEmail("");
+            setPhone("");
+            setCompanyId("");
+            setIsAdding(false);
+            fetchContacts();
+        }
+    };
+
+    const deleteContact = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this contact?")) return;
+        const { error } = await insforge.database.from("contacts").delete().eq("id", id);
+        if (!error) fetchContacts();
+    };
 
     const filteredContacts = contacts.filter(
         (c) =>
@@ -48,7 +96,10 @@ export function ContactsPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Contacts</h2>
                     <p className="text-neutral-400">Manage your customers, leads, and partners.</p>
                 </div>
-                <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                <button 
+                    onClick={() => setIsAdding(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
                     <Plus className="w-5 h-5" />
                     Add Contact
                 </button>
@@ -78,6 +129,7 @@ export function ContactsPage() {
                                 <th className="px-6 py-4 font-medium text-neutral-400">Contact Info</th>
                                 <th className="px-6 py-4 font-medium text-neutral-400">Company</th>
                                 <th className="px-6 py-4 font-medium text-neutral-400">Tags</th>
+                                <th className="px-6 py-4 font-medium text-neutral-400 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-800/50">
@@ -142,6 +194,14 @@ export function ContactsPage() {
                                                 )}
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={() => deleteContact(contact.id)}
+                                                className="text-neutral-500 hover:text-red-400 transition-colors p-1"
+                                            >
+                                                <span className="text-xs">Delete</span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -149,6 +209,87 @@ export function ContactsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Add Contact Modal */}
+            {isAdding && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-neutral-800 w-full max-w-lg rounded-2xl shadow-2xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-6">Add New Contact</h3>
+                        <form onSubmit={handleAddContact} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">First Name</label>
+                                    <input
+                                        autoFocus
+                                        required
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        placeholder="Jane"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Last Name</label>
+                                    <input
+                                        required
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        placeholder="Smith"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Email Address</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="jane@example.com"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Phone Number</label>
+                                <input
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    placeholder="+1 (555) 000-0000"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Company</label>
+                                <select
+                                    value={companyId}
+                                    onChange={(e) => setCompanyId(e.target.value)}
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
+                                >
+                                    <option value="">Select a company...</option>
+                                    {companies.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAdding(false)}
+                                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all font-semibold shadow-lg shadow-indigo-600/20"
+                                >
+                                    Save Contact
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

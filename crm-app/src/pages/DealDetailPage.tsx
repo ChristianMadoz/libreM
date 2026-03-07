@@ -6,6 +6,8 @@ import {
     ArrowLeft, Paperclip, CheckSquare, MessageSquare,
     CircleDollarSign, User, Building, Calendar
 } from "lucide-react";
+import { AISummary } from "../components/AISummary";
+import { cn } from "../lib/utils";
 
 export function DealDetailPage() {
     const { id } = useParams();
@@ -183,6 +185,9 @@ export function DealDetailPage() {
 
                 {/* RIGHT COLUMN: Activity Timeline & Tasks */}
                 <div className="lg:col-span-2 space-y-6 flex flex-col">
+                    
+                    {/* AI Insights Section */}
+                    <AISummary deal={deal} notes={notes} tasks={tasks} />
 
                     {/* Tasks/Reminders Section */}
                     <div className="bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-xl rounded-2xl p-6 shadow-xl">
