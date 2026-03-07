@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Building2, Globe } from "lucide-react";
+import { Search, Plus, Building2, Globe, Trash2 } from "lucide-react";
 import { insforge } from "../lib/insforge";
-
-type Company = {
-    id: string;
-    name: string;
-    industry: string;
-    website: string;
-};
+import { Company } from "../types";
 
 export function CompaniesPage() {
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -66,7 +60,7 @@ export function CompaniesPage() {
         }
     };
 
-    const filtered = companies.filter((c) =>
+    const filtered = companies.filter((c: Company) =>
         c.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -100,57 +94,69 @@ export function CompaniesPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-neutral-900/50 sticky top-0 z-10 backdrop-blur-md">
-                            <tr>
-                                <th className="px-6 py-4 font-medium text-neutral-400">Company Name</th>
-                                <th className="px-6 py-4 font-medium text-neutral-400">Industry</th>
-                                <th className="px-6 py-4 font-medium text-neutral-400">Website</th>
-                                <th className="px-6 py-4 font-medium text-neutral-400 text-right">Actions</th>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-neutral-800/60 bg-neutral-800/20">
+                                <th className="px-6 py-4 text-sm font-semibold text-neutral-300">Company</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-neutral-300">Industry</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-neutral-300">Website</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-neutral-300">Created</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-neutral-300">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-neutral-800/50">
+                        <tbody className="divide-y divide-neutral-800/40">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={3} className="px-6 py-8 text-center text-neutral-500">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 italic">
                                         Loading companies...
                                     </td>
                                 </tr>
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} className="px-6 py-12 text-center">
-                                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-neutral-800/50 mb-3 text-neutral-400">
-                                            <Building2 className="w-6 h-6" />
-                                        </div>
-                                        <p className="text-neutral-300 font-medium">No companies found</p>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 italic">
+                                        No companies found.
                                     </td>
                                 </tr>
                             ) : (
                                 filtered.map((company) => (
                                     <tr key={company.id} className="hover:bg-neutral-800/30 transition-colors group">
-                                        <td className="px-6 py-4 font-semibold text-neutral-200 group-hover:text-white">
-                                            {company.name}
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                                                    <Building2 className="w-5 h-5" />
+                                                </div>
+                                                <span className="font-medium text-neutral-100">{company.name}</span>
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 text-neutral-400">
-                                            <span className="px-2.5 py-1 rounded bg-neutral-800/50 text-neutral-300 text-xs border border-neutral-700/30">
-                                                {company.industry || "—"}
-                                            </span>
+                                        <td className="px-6 py-4 text-neutral-400 text-sm">
+                                            {company.industry || "N/A"}
                                         </td>
-                                        <td className="px-6 py-4 text-neutral-400">
+                                        <td className="px-6 py-4">
                                             {company.website ? (
-                                                <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-indigo-400 transition-colors">
-                                                    <Globe className="w-4 h-4" />
-                                                    {company.website}
+                                                <a 
+                                                    href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 text-sm transition-colors"
+                                                >
+                                                    <Globe className="w-3.5 h-3.5" />
+                                                    {company.website.replace(/^https?:\/\//, "")}
                                                 </a>
-                                            ) : "—"}
+                                            ) : (
+                                                <span className="text-neutral-600 text-sm">-</span>
+                                            )}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-neutral-500 text-sm italic">
+                                            {company.created_at ? new Date(company.created_at).toLocaleDateString() : "-"}
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <button 
                                                 onClick={() => deleteCompany(company.id)}
-                                                className="text-neutral-500 hover:text-red-400 transition-colors p-1"
+                                                className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                                title="Delete company"
                                             >
-                                                <span className="text-xs">Delete</span>
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </td>
                                     </tr>
@@ -161,54 +167,55 @@ export function CompaniesPage() {
                 </div>
             </div>
 
-            {/* Add Company Modal */}
             {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-neutral-900 border border-neutral-800 w-full max-w-md rounded-2xl shadow-2xl p-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
                         <h3 className="text-xl font-bold text-white mb-4">Add New Company</h3>
                         <form onSubmit={handleAddCompany} className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Company Name</label>
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-400 mb-1">Company Name</label>
                                 <input
-                                    autoFocus
                                     required
+                                    type="text"
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
-                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
                                     placeholder="Acme Corp"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Industry</label>
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-400 mb-1">Industry</label>
                                 <input
+                                    type="text"
                                     value={newIndustry}
                                     onChange={(e) => setNewIndustry(e.target.value)}
-                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
                                     placeholder="Technology"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Website</label>
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-400 mb-1">Website</label>
                                 <input
+                                    type="text"
                                     value={newWebsite}
                                     onChange={(e) => setNewWebsite(e.target.value)}
-                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
                                     placeholder="www.acme.com"
                                 />
                             </div>
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex gap-3 mt-6">
                                 <button
                                     type="button"
                                     onClick={() => setIsAdding(false)}
-                                    className="flex-1 px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all font-medium"
+                                    className="flex-1 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-medium transition"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all font-semibold shadow-lg shadow-indigo-600/20"
+                                    className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition shadow-lg shadow-indigo-500/20"
                                 >
-                                    Save Company
+                                    Create Company
                                 </button>
                             </div>
                         </form>

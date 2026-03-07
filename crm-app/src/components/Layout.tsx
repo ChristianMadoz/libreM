@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Building2, BriefcaseMenu, LogOut, Loader2 } from "lucide-react";
+import { LayoutDashboard, Users, Building2, Briefcase, LogOut, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { insforge } from "../lib/insforge";
 import { useState, useEffect } from "react";
@@ -55,7 +55,7 @@ export function Layout() {
             <aside className="w-64 border-r border-neutral-800 bg-neutral-900/50 flex flex-col backdrop-blur-xl">
                 <div className="p-6 flex items-center gap-3">
                     <div className="bg-indigo-500/20 p-2 rounded-xl text-indigo-400 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-                        <BriefcaseMenu className="w-6 h-6" />
+                        <Briefcase className="w-6 h-6" />
                     </div>
                     <h1 className="text-xl font-bold bg-gradient-to-br from-white to-neutral-400 bg-clip-text text-transparent">Nexus CRM</h1>
                 </div>

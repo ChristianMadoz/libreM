@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { insforge } from "../lib/insforge";
 
+import { Deal, Note, Task } from "../types";
+
 interface AISummaryProps {
-    deal: any;
-    notes: any[];
-    tasks: any[];
+    deal: Deal;
+    notes: Note[];
+    tasks: Task[];
 }
 
 export function AISummary({ deal, notes, tasks }: AISummaryProps) {

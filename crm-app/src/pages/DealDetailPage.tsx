@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { insforge } from "../lib/insforge";
-import { format } from "date-fns";
 import {
     ArrowLeft, Paperclip, CheckSquare, MessageSquare,
-    CircleDollarSign, User, Building, Calendar
+    DollarSign, User, Building, Calendar
 } from "lucide-react";
 import { AISummary } from "../components/AISummary";
 import { cn } from "../lib/utils";
+import { Deal, Note, Task, Attachment } from "../types";
 
 export function DealDetailPage() {
     const { id } = useParams();
-    const [deal, setDeal] = useState<any>(null);
-    const [notes, setNotes] = useState<any[]>([]);
-    const [tasks, setTasks] = useState<any[]>([]);
-    const [attachments, setAttachments] = useState<any[]>([]);
+    const [deal, setDeal] = useState<Deal | null>(null);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
 
     // Form states
     const [newNote, setNewNote] = useState("");
@@ -71,7 +71,7 @@ export function DealDetailPage() {
     };
 
     const toggleTask = async (taskId: string, currentStatus: boolean) => {
-        setTasks(tasks.map(t => t.id === taskId ? { ...t, is_completed: !currentStatus } : t));
+        setTasks(tasks.map((t: Task) => t.id === taskId ? { ...t, is_completed: !currentStatus } : t));
         await insforge.database
             .from("tasks")
             .update({ is_completed: !currentStatus })
@@ -133,12 +133,12 @@ export function DealDetailPage() {
                         <h3 className="text-lg font-semibold text-white mb-4">Deal Overview</h3>
                         <div className="space-y-4">
                             <div className="flex items-center gap-3 text-emerald-400">
-                                <CircleDollarSign className="w-5 h-5 opacity-80" />
+                                <DollarSign className="w-5 h-5 opacity-80" />
                                 <span className="text-2xl font-bold">${Number(deal.value || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex items-center gap-3 text-neutral-300">
                                 <Calendar className="w-5 h-5 text-neutral-500" />
-                                <span>{deal.expected_close_date ? format(new Date(deal.expected_close_date), "MMMM d, yyyy") : "No date set"}</span>
+                                <span>{deal.expected_close_date ? new Date(deal.expected_close_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : "No date set"}</span>
                             </div>
 
                             <div className="pt-4 border-t border-neutral-800/60 space-y-3">
@@ -265,9 +265,11 @@ export function DealDetailPage() {
                                         <div className="absolute left-0.5 top-1.5 w-3 h-3 rounded-full bg-neutral-800 border-2 border-neutral-900"></div>
                                         <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-xl p-4">
                                             <p className="text-sm text-neutral-300 whitespace-pre-wrap">{note.content}</p>
-                                            <p className="text-xs text-neutral-500 mt-2">
-                                                {format(new Date(note.created_at), "MMM d, yyyy 'at' h:mm a")}
-                                            </p>
+                                            {note.created_at && (
+                                                <p className="text-xs text-neutral-500 mt-2">
+                                                    {new Date(note.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 ))

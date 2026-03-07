@@ -1,21 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MoreHorizontal, DollarSign, Calendar, Building, User } from "lucide-react";
+import { Plus, DollarSign, Calendar, Building, User } from "lucide-react";
 import { insforge } from "../lib/insforge";
-import { format } from "date-fns";
 import { cn } from "../lib/utils";
+import { Deal } from "../types";
 
 const STAGES = ["Lead", "Meeting", "Negotiation", "Closed Won", "Closed Lost"];
-
-type Deal = {
-    id: string;
-    title: string;
-    value: number;
-    stage: string;
-    expected_close_date: string;
-    contacts?: { first_name: string; last_name: string };
-    companies?: { name: string };
-};
 
 export function DealsPage() {
     const [deals, setDeals] = useState<Deal[]>([]);
@@ -89,13 +79,17 @@ export function DealsPage() {
 
     const moveDeal = async (dealId: string, newStage: string) => {
         // Optimistic UI update
-        setDeals(deals.map(d => d.id === dealId ? { ...d, stage: newStage } : d));
+        setDeals(deals.map((d: Deal) => d.id === dealId ? { ...d, stage: newStage } : d));
 
         // DB update
-        await insforge.database
+        const { error } = await insforge.database
             .from("deals")
             .update({ stage: newStage })
             .eq("id", dealId);
+
+        if (error) {
+            fetchDeals(); // Revert on error
+        }
     };
 
     return (
@@ -105,7 +99,7 @@ export function DealsPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Deals Pipeline</h2>
                     <p className="text-neutral-400">Manage your active sales opportunities.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setIsAdding(true)}
                     className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-500/20"
                 >
@@ -116,8 +110,8 @@ export function DealsPage() {
 
             <div className="flex-1 flex gap-4 overflow-x-auto pb-4 snap-x">
                 {STAGES.map((stage) => {
-                    const stageDeals = deals.filter((d) => (d.stage || "Lead") === stage);
-                    const totalValue = stageDeals.reduce((sum, d) => sum + Number(d.value || 0), 0);
+                    const stageDeals = deals.filter((d: Deal) => d.stage === stage);
+                    const stageTotal = stageDeals.reduce((sum: number, d: Deal) => sum + Number(d.value || 0), 0);
 
                     return (
                         <div key={stage} className="flex-none w-80 flex flex-col h-full bg-neutral-900/30 rounded-2xl border border-neutral-800/50 backdrop-blur-xl snap-center snap-always">
@@ -129,7 +123,7 @@ export function DealsPage() {
                                     </span>
                                 </div>
                                 <div className="text-sm font-medium text-neutral-400">
-                                    ${totalValue.toLocaleString()}
+                                    ${stageTotal.toLocaleString()}
                                 </div>
                             </div>
 
@@ -187,7 +181,7 @@ export function DealsPage() {
                                                 {deal.expected_close_date && (
                                                     <div className="flex items-center gap-1.5 text-xs text-neutral-500">
                                                         <Calendar className="w-3.5 h-3.5" />
-                                                        {format(new Date(deal.expected_close_date), "MMM d")}
+                                                         {new Date(deal.expected_close_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                     </div>
                                                 )}
                                             </div>
