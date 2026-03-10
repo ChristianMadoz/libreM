@@ -63,7 +63,12 @@ export const CartProvider = ({ children }) => {
   const loadCart = async () => {
     try {
       const cartData = await cartActions.getCart();
-      setCart(cartData.cart); // api.js returns data directly, and getCart returns {cart: {...}}
+      // Backend returns { items: [...], total: ... }
+      setCart({
+        items: cartData.items || [],
+        total: cartData.total || 0,
+        updated_at: cartData.updated_at
+      });
     } catch (error) {
       console.warn('Backend cart failed, using mock');
       const localCartItems = getMockCart();
@@ -84,8 +89,13 @@ export const CartProvider = ({ children }) => {
     if (isAuthenticated) {
       try {
         const response = await cartActions.addToCart({ product_id: productId, quantity, color });
-        setCart(response.cart);
-        return response.cart;
+        const updatedCart = {
+          items: response.items || [],
+          total: response.total || 0,
+          updated_at: response.updated_at
+        };
+        setCart(updatedCart);
+        return updatedCart;
       } catch (error) {
         console.warn('Failed to add to backend cart, fallback to mock');
       }
@@ -124,8 +134,13 @@ export const CartProvider = ({ children }) => {
     if (isAuthenticated) {
       try {
         const response = await cartActions.updateItem(productId, quantity, color);
-        setCart(response.cart);
-        return response.cart;
+        const updatedCart = {
+          items: response.items || [],
+          total: response.total || 0,
+          updated_at: response.updated_at
+        };
+        setCart(updatedCart);
+        return updatedCart;
       } catch (error) {
         console.warn('Failed to update backend cart, fallback to mock');
       }
@@ -153,8 +168,13 @@ export const CartProvider = ({ children }) => {
     if (isAuthenticated) {
       try {
         const response = await cartActions.removeItem(productId, color);
-        setCart(response.cart);
-        return response.cart;
+        const updatedCart = {
+          items: response.items || [],
+          total: response.total || 0,
+          updated_at: response.updated_at
+        };
+        setCart(updatedCart);
+        return updatedCart;
       } catch (error) {
         console.warn('Failed to remove from backend cart, fallback to mock');
       }

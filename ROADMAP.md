@@ -15,10 +15,10 @@ El proyecto se encuentra en una fase de transición, moviéndose de datos simula
 
 ### Fase 2: Backend y Base de Datos (🚧 En Progreso)
 
-- [ ] **Configuración BD**: Verificar conexión y colecciones en MongoDB.
-- [ ] **Seed Data**: Ejecutar `backend/seed.py` para poblar la base de datos correctamente.
-- [ ] **Productos**: Confirmar que los endpoints de productos lean de MongoDB en lugar de mocks.
-- [ ] **Categorías**: Confirmar que los endpoints de categorías lean de MongoDB.
+- [x] **Configuración BD**: Verificar conexión y tablas en PostgreSQL (InsForge).
+- [x] **Seed Data**: Ejecutar `backend/seed_db.js` (Node.js workaround) para poblar la base de datos.
+- [ ] **Productos**: Confirmar que los endpoints de productos lean de PostgreSQL en lugar de mocks.
+- [ ] **Categorías**: Confirmar que los endpoints de categorías lean de PostgreSQL.
 
 ### Fase 3: Autenticación y Usuarios
 

@@ -23,9 +23,9 @@ const Profile = () => {
         if (!user?.user_id) return;
 
         const { data, error } = await insforge.database
-            .from('profiles')
+            .from('users')
             .select('*')
-            .eq('id', user.user_id)
+            .eq('user_id', user.user_id)
             .single();
 
         if (data) {
@@ -77,15 +77,13 @@ const Profile = () => {
 
             if (uploadError) throw uploadError;
 
-            // 2. Update/Insert in profiles table
+            // 2. Update in users table
             const { error: dbError } = await insforge.database
-                .from('profiles')
-                .upsert({
-                    id: user.user_id,
-                    avatar_url: uploadData.url,
-                    avatar_key: uploadData.key,
-                    updated_at: new Date().toISOString(),
-                });
+                .from('users')
+                .update({
+                    picture: uploadData.url,
+                })
+                .eq('user_id', user.user_id);
 
             if (dbError) throw dbError;
 
@@ -112,7 +110,7 @@ const Profile = () => {
         );
     }
 
-    const currentProfileImage = profileData?.avatar_url || user.picture || 'https://github.com/shadcn.png';
+    const currentProfileImage = profileData?.picture || user.picture || 'https://github.com/shadcn.png';
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">

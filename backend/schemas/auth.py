@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 
@@ -8,13 +8,15 @@ class UserBase(BaseModel):
     picture: Optional[str] = None
 
 class User(UserBase):
-    user_id: str
-    google_id: Optional[str] = None
+    user_id: str = Field(..., alias="id")
+    google_id: Optional[str] = Field(None, alias="googleId")
     favorites: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
 
 class UserLogin(BaseModel):
     email: str

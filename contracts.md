@@ -52,12 +52,12 @@
 ## 2. Datos Mockeados a Reemplazar
 
 ### En mock.js:
-- `mockProducts` → Migrar a colección `products` en MongoDB
-- `mockCategories` → Migrar a colección `categories` en MongoDB
-- `getMockUser/setMockUser` → Reemplazar con autenticación real y colección `users`
-- `getMockCart/setMockCart` → Reemplazar con colección `carts` asociada a usuario
-- `getMockFavorites/setMockFavorites` → Reemplazar con campo `favorites` en colección `users`
-- `getMockOrders/setMockOrders` → Reemplazar con colección `orders`
+- `mockProducts` → Migrar a tabla `products` en PostgreSQL
+- `mockCategories` → Migrar a tabla `categories` en PostgreSQL
+- `getMockUser/setMockUser` → Reemplazar con autenticación real y tabla `users`
+- `getMockCart/setMockCart` → Reemplazar con tabla `carts` asociada a usuario
+- `getMockFavorites/setMockFavorites` → Reemplazar con campo `favorites` en tabla `users`
+- `getMockOrders/setMockOrders` → Reemplazar con tabla `orders`
 
 ## 3. Implementación Backend
 

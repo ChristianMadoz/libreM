@@ -114,8 +114,7 @@ const Checkout = () => {
         total: total
       };
 
-      const response = await orderActions.createOrder(orderData);
-      const order = response.order;
+      const order = await orderActions.createOrder(orderData);
 
       await clearCart();
 
