@@ -1,75 +1,186 @@
-import axios from 'axios';
+import { insforge } from '../lib/insforge';
 
-// Use REACT_APP_BACKEND_URL from .env, fallback to localhost. Append /api
-const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-const API_BASE_URL = `${backendUrl}/api`;
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // Required for secure httponly cookies
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add token if it exists in localStorage
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('session_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Common error handler
+const handleError = (error) => {
+  if (error && error.message && error.message.includes('401')) {
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user');
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
-// Response interceptor for handling common errors (like 401 Unauthorized)
-api.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized access (e.g., redirect to login or clear local state)
-      localStorage.removeItem('session_token');
-      // window.location.href = '/login'; // Optional: auto-redirect
-    }
-    return Promise.reject(error.response?.data || error.message);
-  }
-);
+  return Promise.reject(error?.message || error || 'Unknown error');
+};
 
 export const authActions = {
-  loginGoogle: (sessionId) => api.post('/auth/google', { session_id: sessionId }),
-  register: (data) => api.post('/auth/register', data),
-  getMe: () => api.get('/auth/me'),
-  logout: () => api.post('/auth/logout'),
+  loginGoogle: async (sessionId) => {
+    // Note: insforge.auth handles sessions directly, but if there's a custom backend bridge:
+    const { data, error } = await insforge.auth.signInWithOAuth({ provider: 'google' });
+    if (error) throw error;
+    return data;
+  },
+  register: async ({ email, password, name }) => {
+    const { data, error } = await insforge.auth.signUp({
+      email,
+      password,
+      options: { data: { name } }
+    });
+    if (error) throw error;
+    return data;
+  },
+  getMe: async () => {
+    const { data, error } = await insforge.auth.getCurrentSession();
+    if (error || !data.session) throw error || new Error('No session');
+    return data.session.user;
+  },
+  logout: async () => {
+    const { error } = await insforge.auth.signOut();
+    if (error) throw error;
+  }
 };
 
 export const productActions = {
-  getProducts: (params) => api.get('/products', { params }),
-  getProduct: (id) => api.get(`/products/${id}`),
-  getCategories: () => api.get('/categories'),
-  createProduct: (data) => api.post('/products', data),
+  getProducts: async (params = {}) => {
+    let query = insforge.database.from('products').select('*');
+    
+    if (params.category) {
+      query = query.eq('category_id', params.category);
+    }
+    if (params.search) {
+      query = query.ilike('name', `%${params.search}%`);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return { products: data || [] };
+  },
+  getProduct: async (id) => {
+    const { data, error } = await insforge.database
+      .from('products')
+      .select('*, categories(*)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  getCategories: async () => {
+    const { data, error } = await insforge.database
+      .from('categories')
+      .select('*')
+      .order('name');
+    if (error) throw error;
+    return { categories: data || [] };
+  },
 };
 
 export const cartActions = {
-  getCart: () => api.get('/cart'),
-  addToCart: (data) => api.post('/cart', data),
-  updateItem: (id, quantity, color) =>
-    api.put(`/cart/${id}`, { quantity }, { params: { color } }),
-  removeItem: (id, color) =>
-    api.delete(`/cart/${id}`, { params: { color } }),
-  clearCart: () => api.delete('/cart'),
+  getCart: async () => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) return { items: [], total: 0 };
+
+    const { data, error } = await insforge.database
+      .from('cart_items')
+      .select('*, products(*)')
+      .eq('user_id', session.session.user.id);
+    
+    if (error) throw error;
+    
+    const total = data.reduce((sum, item) => sum + (item.products?.price * item.quantity), 0);
+    return { items: data || [], total };
+  },
+  addToCart: async ({ product_id, quantity, color }) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const { error } = await insforge.database
+      .from('cart_items')
+      .insert([{
+        user_id: session.session.user.id,
+        product_id,
+        quantity,
+        color
+      }]);
+    
+    if (error) throw error;
+    return cartActions.getCart();
+  },
+  updateItem: async (productId, quantity, color) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { error } = await insforge.database
+      .from('cart_items')
+      .update({ quantity })
+      .eq('user_id', session.session.user.id)
+      .eq('product_id', productId)
+      .eq('color', color);
+    
+    if (error) throw error;
+    return cartActions.getCart();
+  },
+  removeItem: async (productId, color) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { error } = await insforge.database
+      .from('cart_items')
+      .delete()
+      .eq('user_id', session.session.user.id)
+      .eq('product_id', productId)
+      .eq('color', color);
+    
+    if (error) throw error;
+    return cartActions.getCart();
+  },
+  clearCart: async () => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { error } = await insforge.database
+      .from('cart_items')
+      .delete()
+      .eq('user_id', session.session.user.id);
+    
+    if (error) throw error;
+  }
 };
 
 export const favoriteActions = {
-  getFavorites: () => api.get('/favorites'),
-  addFavorite: (id) => api.post(`/favorites/${id}`),
-  removeFavorite: (id) => api.delete(`/favorites/${id}`),
+  getFavorites: async () => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) return { products: [] };
+
+    const { data, error } = await insforge.database
+      .from('favorites')
+      .select('*, products(*)')
+      .eq('user_id', session.session.user.id);
+    
+    if (error) throw error;
+    return { products: data.map(f => f.products) || [] };
+  },
+  addFavorite: async (productId) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { error } = await insforge.database
+      .from('favorites')
+      .insert([{ user_id: session.session.user.id, product_id: productId }]);
+    
+    if (error) throw error;
+    return favoriteActions.getFavorites();
+  },
+  removeFavorite: async (productId) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { error } = await insforge.database
+      .from('favorites')
+      .delete()
+      .eq('user_id', session.session.user.id)
+      .eq('product_id', productId);
+    
+    if (error) throw error;
+    return favoriteActions.getFavorites();
+  },
 };
 
 export const orderActions = {
-  createOrder: (data) => api.post('/orders', orderData),
-  getOrders: () => api.get('/orders'),
-  getOrder: (id) => api.get(`/orders/${id}`),
+  getOrders: async () => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data, error } = await insforge.database
+      .from('orders')
+      .select('*, order_items(*, products(*))')
+      .eq('user_id', session.session.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
 };
-
-export default api;
