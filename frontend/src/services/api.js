@@ -8,10 +8,18 @@ const handleError = (error) => {
   }
   return Promise.reject(error?.message || error || 'Unknown error');
 };
-
 export const authActions = {
+  login: async ({ email, password }) => {
+    const { data, error } = await insforge.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    // Return structure compatible with existing AuthContext
+    return {
+      user: data.user,
+      token: data.session?.access_token,
+      session: data.session
+    };
+  },
   loginGoogle: async (sessionId) => {
-    // Note: insforge.auth handles sessions directly, but if there's a custom backend bridge:
     const { data, error } = await insforge.auth.signInWithOAuth({ provider: 'google' });
     if (error) throw error;
     return data;
@@ -23,7 +31,12 @@ export const authActions = {
       options: { data: { name } }
     });
     if (error) throw error;
-    return data;
+    // Return structure compatible with existing AuthContext
+    return {
+      user: data.user,
+      token: data.session?.access_token,
+      session: data.session
+    };
   },
   getMe: async () => {
     const { data, error } = await insforge.auth.getCurrentSession();

@@ -70,10 +70,24 @@ const Register = () => {
 
         setLoading(true);
         try {
-            await register(formData.name, formData.email, formData.password);
+            const user = await register(formData.name, formData.email, formData.password);
+            // Check if user is authenticated (means no email verification was required)
+            if (user && !user.session && !localStorage.getItem('session_token')) {
+                setError('¡Cuenta creada! Por favor, verifica tu email para activar tu cuenta antes de iniciar sesión.');
+                setLoading(false);
+            } else {
+                // If authenticated, AuthContext handles the redirect via useEffect
+            }
         } catch (err) {
             console.error('Registration failed:', err);
-            setError(err.response?.data?.detail || 'Error al crear la cuenta. Por favor, intenta de nuevo.');
+            const message = err.message || '';
+            if (message.includes('already registered') || message.includes('already exists') || err.status === 409) {
+                setError('Este correo electrónico ya está registrado. Intenta iniciar sesión.');
+            } else if (message.includes('Password should be')) {
+                setError('La contraseña debe tener al menos 6 caracteres.');
+            } else {
+                setError(message || 'Error al crear la cuenta. Por favor, intenta de nuevo.');
+            }
             setLoading(false);
         }
     };

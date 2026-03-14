@@ -36,13 +36,15 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Assuming register or a future login endpoint exists
-      // For now, using register for simplicity if login is not implemented in backend main.py
-      const data = await authActions.register({ email, password, name: 'User' });
+      const data = await authActions.login({ email, password });
       setUser(data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      setIsAuthenticated(!!data.session);
+      if (data.token) {
+        localStorage.setItem('session_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
       return data.user;
     } catch (error) {
       console.error('Login failed:', error);
@@ -67,10 +69,16 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const data = await authActions.register({ name, email, password });
-      setUser(data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      if (data.token) {
+        setIsAuthenticated(true);
+        localStorage.setItem('session_token', data.token);
+      } else {
+        setIsAuthenticated(false);
+      }
       return data.user;
     } catch (error) {
       console.error('Registration failed:', error);
