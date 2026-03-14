@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './App.css';
 import Header from './components/Header';
@@ -21,32 +21,61 @@ import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
+// CRM Imports
+import { AuthPage } from './pages/crm/AuthPage';
+import { DealsPage } from './pages/crm/DealsPage';
+import { DealDetailPage } from './pages/crm/DealDetailPage';
+import { ContactsPage } from './pages/crm/ContactsPage';
+import { CompaniesPage } from './pages/crm/CompaniesPage';
+import { CRMLayout } from './components/crm/CRMLayout';
+
+function AppContent() {
+  const location = useLocation();
+  const isCRM = location.pathname.startsWith('/crm');
+
+  return (
+    <>
+      {!isCRM && <Header />}
+      <Routes>
+        {/* E-commerce Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/search" element={<SearchResults />} />
+        <Route path="/category/:id" element={<Category />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/users" element={<Profile />} />
+        <Route path="/posts" element={<Posts />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
+
+        {/* CRM Routes */}
+        <Route path="/crm/auth" element={<AuthPage />} />
+        <Route path="/crm" element={<CRMLayout />}>
+          <Route index element={<DealsPage />} />
+          <Route path="deals/:id" element={<DealDetailPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="companies" element={<CompaniesPage />} />
+        </Route>
+      </Routes>
+      <Toaster />
+      <SpeedInsights />
+    </>
+  );
+}
+
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/search" element={<SearchResults />} />
-              <Route path="/category/:id" element={<Category />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/users" element={<Profile />} />
-              <Route path="/posts" element={<Posts />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-            </Routes>
-            <Toaster />
-            <SpeedInsights />
+            <AppContent />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
@@ -54,4 +83,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;
