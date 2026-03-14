@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { productsAPI } from '../services/api';
+import { productActions as productsAPI } from '../services/api';
 
 const Admin = () => {
     const navigate = useNavigate();
