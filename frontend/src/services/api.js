@@ -8,6 +8,7 @@ const handleError = (error) => {
   }
   return Promise.reject(error?.message || error || 'Unknown error');
 };
+
 export const authActions = {
   login: async ({ email, password }) => {
     const { data, error } = await insforge.auth.signInWithPassword({ email, password });
@@ -15,33 +16,70 @@ export const authActions = {
     // Return structure compatible with existing AuthContext
     return {
       user: data.user,
-      token: data.session?.access_token,
+      token: data.session?.accessToken,
       session: data.session
     };
   },
-  loginGoogle: async (sessionId) => {
-    const { data, error } = await insforge.auth.signInWithOAuth({ provider: 'google' });
+  loginGoogle: async () => {
+    const { data, error } = await insforge.auth.signInWithOAuth({
+      provider: 'google',
+      redirectTo: window.location.origin
+    });
     if (error) throw error;
+    // For OAuth, redirect to Google
+    if (data.url) {
+      window.location.href = data.url;
+    }
     return data;
   },
   register: async ({ email, password, name }) => {
     const { data, error } = await insforge.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      name
     });
     if (error) throw error;
+
+    // Check if email verification is required
+    if (data?.requireEmailVerification) {
+      // Return verification required flag
+      return {
+        requireEmailVerification: true,
+        email: email
+      };
+    }
+
     // Return structure compatible with existing AuthContext
     return {
       user: data.user,
-      token: data.session?.access_token,
+      token: data.session?.accessToken,
       session: data.session
     };
+  },
+  verifyEmail: async ({ email, otp }) => {
+    const { data, error } = await insforge.auth.verifyEmail({ email, otp });
+    if (error) throw error;
+    // verifyEmail auto-saves session
+    return {
+      user: data.user,
+      token: data.accessToken,
+      session: { accessToken: data.accessToken, user: data.user }
+    };
+  },
+  resendVerification: async ({ email }) => {
+    const { error } = await insforge.auth.resendVerificationEmail({ email });
+    if (error) throw error;
+    return { success: true };
   },
   getMe: async () => {
     const { data, error } = await insforge.auth.getCurrentSession();
     if (error || !data.session) throw error || new Error('No session');
     return data.session.user;
+  },
+  getSession: async () => {
+    const { data, error } = await insforge.auth.getCurrentSession();
+    if (error) throw error;
+    return data.session;
   },
   logout: async () => {
     const { error } = await insforge.auth.signOut();

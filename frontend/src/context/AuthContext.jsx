@@ -15,6 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState(null);
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -23,9 +25,14 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const userData = await authActions.getMe();
-      setUser(userData);
-      setIsAuthenticated(true);
+      const session = await authActions.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } catch (error) {
       setUser(null);
       setIsAuthenticated(false);
@@ -39,12 +46,6 @@ export const AuthProvider = ({ children }) => {
       const data = await authActions.login({ email, password });
       setUser(data.user);
       setIsAuthenticated(!!data.session);
-      if (data.token) {
-        localStorage.setItem('session_token', data.token);
-      }
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
       return data.user;
     } catch (error) {
       console.error('Login failed:', error);
@@ -52,16 +53,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async (sessionId) => {
+  const loginWithGoogle = async () => {
     try {
-      const data = await authActions.loginGoogle(sessionId);
-      setUser(data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      return data.user;
+      // This will redirect to Google, so no return needed
+      await authActions.loginGoogle();
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Google login failed:', error);
       throw error;
     }
   };
@@ -69,19 +66,53 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const data = await authActions.register({ name, email, password });
+
+      // Check if email verification is required
+      if (data.requireEmailVerification) {
+        setAwaitingVerification(true);
+        setVerificationEmail(email);
+        return { requireEmailVerification: true, email };
+      }
+
+      // User is already signed in (no verification required)
       if (data.user) {
         setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-      if (data.token) {
         setIsAuthenticated(true);
-        localStorage.setItem('session_token', data.token);
-      } else {
-        setIsAuthenticated(false);
       }
       return data.user;
     } catch (error) {
       console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
+  const verifyEmail = async (otp) => {
+    try {
+      if (!verificationEmail) {
+        throw new Error('No email set for verification');
+      }
+
+      const data = await authActions.verifyEmail({ email: verificationEmail, otp });
+      setUser(data.user);
+      setIsAuthenticated(true);
+      setAwaitingVerification(false);
+      setVerificationEmail(null);
+      return data.user;
+    } catch (error) {
+      console.error('Email verification failed:', error);
+      throw error;
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    try {
+      if (!verificationEmail) {
+        throw new Error('No email set for verification');
+      }
+      await authActions.resendVerification({ email: verificationEmail });
+      return { success: true };
+    } catch (error) {
+      console.error('Resend verification failed:', error);
       throw error;
     }
   };
@@ -94,8 +125,8 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem('session_token');
-      localStorage.removeItem('user');
+      setAwaitingVerification(false);
+      setVerificationEmail(null);
     }
   };
 
@@ -103,9 +134,13 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     isAuthenticated,
+    awaitingVerification,
+    verificationEmail,
     login,
     loginWithGoogle,
     register,
+    verifyEmail,
+    resendVerificationEmail,
     logout,
     checkAuth,
   };
