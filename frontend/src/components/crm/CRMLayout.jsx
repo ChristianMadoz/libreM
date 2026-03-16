@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, Building2, Briefcase, LogOut, Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { insforge } from "../../lib/insforge";
+import { useAuth } from "../../context/AuthContext";
 import { useState, useEffect } from "react";
 
 const navItems = [
@@ -13,24 +13,16 @@ const navItems = [
 export function CRMLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { isAuthenticated, user, loading, logout } = useAuth();
 
     useEffect(() => {
-        const checkAuth = async () => {
-            const { data } = await insforge.auth.getCurrentSession();
-            if (!data?.session) {
-                navigate("/crm/auth");
-            } else {
-                setUser(data.session.user);
-            }
-            setLoading(false);
-        };
-        checkAuth();
-    }, [navigate]);
+        if (!loading && !isAuthenticated) {
+            navigate("/crm/auth");
+        }
+    }, [isAuthenticated, loading, navigate]);
 
     const handleLogout = async () => {
-        await insforge.auth.signOut();
+        await logout();
         navigate("/crm/auth");
     };
 
@@ -44,11 +36,11 @@ export function CRMLayout() {
 
     if (!user) return null;
 
-    const initials = user.profile?.name
+    const initials = user?.name
         ?.split(" ")
         .map((n) => n[0])
         .join("")
-        .toUpperCase() || user.email[0].toUpperCase();
+        .toUpperCase() || user?.email?.[0].toUpperCase() || "U";
 
     return (
         <div className="flex h-screen bg-neutral-950 text-neutral-100 font-sans">
@@ -87,8 +79,8 @@ export function CRMLayout() {
                             {initials}
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">{user.profile?.name || "User"}</span>
-                            <span className="text-xs text-neutral-500 truncate">{user.email}</span>
+                            <span className="text-sm font-medium truncate">{user?.name || "User"}</span>
+                            <span className="text-xs text-neutral-500 truncate">{user?.email || ""}</span>
                         </div>
                     </div>
                     <button
