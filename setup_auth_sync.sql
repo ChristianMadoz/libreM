@@ -41,24 +41,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Crear trigger en la tabla auth.users
--- Nota: En InsForge, la tabla auth puede no ser accesible directamente
--- Si esto falla, usaremos un enfoque alternativo
-
--- Drop trigger si existe
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
--- Intentar crear trigger (puede fallar dependiendo de permisos)
-DO $$
-BEGIN
-    CREATE TRIGGER on_auth_user_created
-        AFTER INSERT ON auth.users
-        FOR EACH ROW
-        EXECUTE FUNCTION sync_user_from_auth();
-EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE 'No se pudo crear trigger en auth.users - se usará enfoque alternativo';
-END $$;
-
 -- =====================================================
 -- Enfoque alternativo: Función para llamar manualmente
 -- después de crear usuario con el SDK
@@ -104,25 +86,6 @@ EXCEPTION WHEN OTHERS THEN
     RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- =====================================================
--- Política RLS para permitir insert desde auth
--- =====================================================
-
--- Asegurar que usuarios puedan ver su propio perfil
-CREATE POLICY "Users can view own profile from users table" ON users
-    FOR SELECT
-    USING (auth.uid()::text = user_id);
-
--- Permitir que usuarios se inserten a sí mismos
-CREATE POLICY "Users can insert own profile" ON users
-    FOR INSERT
-    WITH CHECK (auth.uid()::text = user_id);
-
--- Permitir que usuarios actualicen su propio perfil
-CREATE POLICY "Users can update own profile" ON users
-    FOR UPDATE
-    USING (auth.uid()::text = user_id);
 
 -- =====================================================
 -- Función wrapper para usar después del registro
