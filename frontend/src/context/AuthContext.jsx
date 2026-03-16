@@ -46,9 +46,28 @@ export const AuthProvider = ({ children }) => {
       const data = await authActions.login({ email, password });
       setUser(data.user);
       setIsAuthenticated(!!data.session);
+      // Verificar que la sesión se guardó correctamente
+      await checkAuth();
       return data.user;
     } catch (error) {
       console.error('Login failed:', error);
+      throw error;
+    }
+  };
+
+  const devLogin = async () => {
+    // Login de desarrollo con usuario predefinido
+    try {
+      const data = await authActions.login({
+        email: 'test@test.com',
+        password: 'test123'
+      });
+      setUser(data.user);
+      setIsAuthenticated(!!data.session);
+      await checkAuth();
+      return data.user;
+    } catch (error) {
+      console.error('Dev login failed:', error);
       throw error;
     }
   };
@@ -137,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     awaitingVerification,
     verificationEmail,
     login,
+    devLogin,
     loginWithGoogle,
     register,
     verifyEmail,

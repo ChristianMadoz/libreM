@@ -35,10 +35,11 @@ const Login = () => {
     setError(null);
     try {
       await login(formData.email, formData.password);
+      // Redirigir después del login exitoso
+      navigate(redirect);
     } catch (err) {
       console.error('Login failed:', err);
       setError('Email o contraseña incorrectos');
-    } finally {
       setLoading(false);
     }
   };
