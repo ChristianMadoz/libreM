@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import Posts from './pages/Posts';
 import Admin from './pages/Admin';
 import AdminReports from './pages/AdminReports';
+import PrivateRoute from './components/PrivateRoute';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -44,23 +45,42 @@ function AppContent() {
         <Route path="/search" element={<SearchResults />} />
         <Route path="/category/:id" element={<Category />} />
         <Route path="/favorites" element={<Favorites />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/orders" element={<Orders />} />
+
+        {/* Protected E-commerce Routes */}
+        <Route path="/checkout" element={
+          <PrivateRoute><Checkout /></PrivateRoute>
+        } />
+        <Route path="/orders" element={
+          <PrivateRoute><Orders /></PrivateRoute>
+        } />
+        <Route path="/profile" element={
+          <PrivateRoute><Profile /></PrivateRoute>
+        } />
+        <Route path="/users" element={
+          <PrivateRoute><Profile /></PrivateRoute>
+        } />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/users" element={<Profile />} />
         <Route path="/posts" element={<Posts />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/reports" element={<AdminReports />} />
 
-        {/* CRM Routes */}
+        {/* CRM Routes - All Protected */}
         <Route path="/crm/auth" element={<AuthPage />} />
-        <Route path="/crm" element={<CRMLayout />}>
+        <Route path="/crm" element={
+          <PrivateRoute redirectTo="/crm/auth">
+            <CRMLayout />
+          </PrivateRoute>
+        }>
           <Route index element={<DealsPage />} />
           <Route path="deals/:id" element={<DealDetailPage />} />
-          <Route path="contacts" element={<ContactsPage />} />
-          <Route path="companies" element={<CompaniesPage />} />
+          <Route path="contacts" element={
+            <PrivateRoute><ContactsPage /></PrivateRoute>
+          } />
+          <Route path="companies" element={
+            <PrivateRoute><CompaniesPage /></PrivateRoute>
+          } />
         </Route>
       </Routes>
       <Toaster />
@@ -83,4 +103,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;

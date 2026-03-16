@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { insforge } from "../../lib/insforge";
+import { useAuth } from "../../context/AuthContext";
 import { Briefcase, Mail, Lock, User, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -14,31 +14,33 @@ export function AuthPage() {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const navigate = useNavigate();
+    const { isAuthenticated, login, register, verifyEmail, awaitingVerification } = useAuth();
 
+    // Redirect if already authenticated
     useEffect(() => {
-        // Check if already logged in
-        insforge.auth.getCurrentSession().then(({ data }) => {
-            if (data?.session) {
-                navigate("/crm");
-            }
-        });
-    }, [navigate]);
+        if (isAuthenticated) {
+            navigate("/crm");
+        }
+    }, [isAuthenticated, navigate]);
+
+    // Handle verification mode from context
+    useEffect(() => {
+        if (awaitingVerification) {
+            setMode("verify");
+        }
+    }, [awaitingVerification]);
 
     const handleSignIn = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
-        const { data, error } = await insforge.auth.signInWithPassword({
-            email,
-            password,
-        });
-
-        if (error) {
-            setError(error.message);
-            setLoading(false);
-        } else if (data?.accessToken) {
+        try {
+            await login(email, password);
             navigate("/crm");
+        } catch (err) {
+            setError(err.message || "Login failed");
+            setLoading(false);
         }
     };
 
@@ -47,21 +49,21 @@ export function AuthPage() {
         setLoading(true);
         setError(null);
 
-        const { data, error } = await insforge.auth.signUp({
-            email,
-            password,
-            name,
-        });
+        try {
+            const result = await register(name, email, password);
 
-        if (error) {
-            setError(error.message);
-            setLoading(false);
-        } else if (data?.requireEmailVerification) {
-            setMode("verify");
-            setMessage("A verification code has been sent to your email.");
-            setLoading(false);
-        } else if (data?.accessToken) {
+            // Check if email verification is required
+            if (result?.requireEmailVerification) {
+                setMode("verify");
+                setMessage("A verification code has been sent to your email.");
+                setLoading(false);
+                return;
+            }
+
             navigate("/crm");
+        } catch (err) {
+            setError(err.message || "Registration failed");
+            setLoading(false);
         }
     };
 
@@ -70,16 +72,12 @@ export function AuthPage() {
         setLoading(true);
         setError(null);
 
-        const { data, error } = await insforge.auth.verifyEmail({
-            email,
-            otp: code,
-        });
-
-        if (error) {
-            setError(error.message);
-            setLoading(false);
-        } else if (data?.accessToken) {
+        try {
+            await verifyEmail(code);
             navigate("/crm");
+        } catch (err) {
+            setError(err.message || "Verification failed");
+            setLoading(false);
         }
     };
 
@@ -101,17 +99,17 @@ export function AuthPage() {
                         {mode === "signin" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Verify Email"}
                     </h1>
                     <p className="text-neutral-500">
-                        {mode === "signin" 
-                            ? "Sign in to access your Nexus CRM" 
-                            : mode === "signup" 
-                            ? "Join our premium CRM platform" 
-                            : "Enter the 6-digit code sent to your email"}
+                        {mode === "signin"
+                            ? "Sign in to access your Nexus CRM"
+                            : mode === "signup"
+                                ? "Join our premium CRM platform"
+                                : "Enter the 6-digit code sent to your email"}
                     </p>
                 </div>
 
                 <div className="bg-neutral-900/40 backdrop-blur-2xl border border-neutral-800 p-8 rounded-3xl shadow-2xl overflow-hidden relative group">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50" />
-                    
+
                     <form onSubmit={mode === "signin" ? handleSignIn : mode === "signup" ? handleSignUp : handleVerify} className="space-y-6">
                         {mode === "signup" && (
                             <div className="space-y-2">
@@ -229,11 +227,11 @@ export function AuthPage() {
                             }}
                             className="text-sm text-neutral-400 hover:text-white transition-colors"
                         >
-                            {mode === "signin" 
-                                ? "Don't have an account? Sign up" 
-                                : mode === "signup" 
-                                ? "Already have an account? Sign in" 
-                                : "Back to Sign In"}
+                            {mode === "signin"
+                                ? "Don't have an account? Sign up"
+                                : mode === "signup"
+                                    ? "Already have an account? Sign in"
+                                    : "Back to Sign In"}
                         </button>
                     </div>
                 </div>
