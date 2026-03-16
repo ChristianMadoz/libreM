@@ -52,14 +52,14 @@ export const authActions = {
 export const productActions = {
   getProducts: async (params = {}) => {
     let query = insforge.database.from('products').select('*');
-    
+
     if (params.category) {
       query = query.eq('category_id', params.category);
     }
     if (params.search) {
       query = query.ilike('name', `%${params.search}%`);
     }
-    
+
     const { data, error } = await query;
     if (error) throw error;
     return { products: data || [] };
@@ -88,63 +88,159 @@ export const cartActions = {
     const { data: session } = await insforge.auth.getCurrentSession();
     if (!session?.session) return { items: [], total: 0 };
 
+    const userId = session.session.user.id;
+
+    // First get the user's cart
+    const { data: cart, error: cartError } = await insforge.database
+      .from('carts')
+      .select('cart_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (cartError || !cart) return { items: [], total: 0 };
+
+    // Then get cart items with products
     const { data, error } = await insforge.database
       .from('cart_items')
       .select('*, products(*)')
-      .eq('user_id', session.session.user.id);
-    
+      .eq('cart_id', cart.cart_id);
+
     if (error) throw error;
-    
+
     const total = data.reduce((sum, item) => sum + (item.products?.price * item.quantity), 0);
     return { items: data || [], total };
   },
+
   addToCart: async ({ product_id, quantity, color }) => {
     const { data: session } = await insforge.auth.getCurrentSession();
     if (!session?.session) throw new Error('Authentication required');
 
-    const { error } = await insforge.database
+    const userId = session.session.user.id;
+
+    // Get or create cart for user
+    const { data: cart } = await insforge.database
+      .from('carts')
+      .select('cart_id')
+      .eq('user_id', userId)
+      .single();
+
+    let cartId = cart?.cart_id;
+
+    if (!cartId) {
+      // Create new cart
+      const { data: newCart, error: insertCartError } = await insforge.database
+        .from('carts')
+        .insert([{ user_id: userId }])
+        .select('cart_id')
+        .single();
+
+      if (insertCartError) throw insertCartError;
+      cartId = newCart.cart_id;
+    }
+
+    // Check if item already exists
+    const { data: existingItem } = await insforge.database
       .from('cart_items')
-      .insert([{
-        user_id: session.session.user.id,
-        product_id,
-        quantity,
-        color
-      }]);
-    
-    if (error) throw error;
+      .select('cart_item_id, quantity')
+      .eq('cart_id', cartId)
+      .eq('product_id', product_id)
+      .eq('color', color || '')
+      .single();
+
+    if (existingItem) {
+      // Update quantity
+      const { error } = await insforge.database
+        .from('cart_items')
+        .update({ quantity: existingItem.quantity + quantity })
+        .eq('cart_item_id', existingItem.cart_item_id);
+
+      if (error) throw error;
+    } else {
+      // Insert new item
+      const { error } = await insforge.database
+        .from('cart_items')
+        .insert([{
+          cart_id: cartId,
+          product_id,
+          quantity,
+          color
+        }]);
+
+      if (error) throw error;
+    }
+
     return cartActions.getCart();
   },
+
   updateItem: async (productId, quantity, color) => {
     const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const userId = session.session.user.id;
+
+    const { data: cart } = await insforge.database
+      .from('carts')
+      .select('cart_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!cart) throw new Error('Cart not found');
+
     const { error } = await insforge.database
       .from('cart_items')
       .update({ quantity })
-      .eq('user_id', session.session.user.id)
+      .eq('cart_id', cart.cart_id)
       .eq('product_id', productId)
-      .eq('color', color);
-    
+      .eq('color', color || '');
+
     if (error) throw error;
     return cartActions.getCart();
   },
+
   removeItem: async (productId, color) => {
     const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const userId = session.session.user.id;
+
+    const { data: cart } = await insforge.database
+      .from('carts')
+      .select('cart_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!cart) throw new Error('Cart not found');
+
     const { error } = await insforge.database
       .from('cart_items')
       .delete()
-      .eq('user_id', session.session.user.id)
+      .eq('cart_id', cart.cart_id)
       .eq('product_id', productId)
-      .eq('color', color);
-    
+      .eq('color', color || '');
+
     if (error) throw error;
     return cartActions.getCart();
   },
+
   clearCart: async () => {
     const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const userId = session.session.user.id;
+
+    const { data: cart } = await insforge.database
+      .from('carts')
+      .select('cart_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!cart) return;
+
     const { error } = await insforge.database
       .from('cart_items')
       .delete()
-      .eq('user_id', session.session.user.id);
-    
+      .eq('cart_id', cart.cart_id);
+
     if (error) throw error;
   }
 };
@@ -158,7 +254,7 @@ export const favoriteActions = {
       .from('favorites')
       .select('*, products(*)')
       .eq('user_id', session.session.user.id);
-    
+
     if (error) throw error;
     return { products: data.map(f => f.products) || [] };
   },
@@ -167,7 +263,7 @@ export const favoriteActions = {
     const { error } = await insforge.database
       .from('favorites')
       .insert([{ user_id: session.session.user.id, product_id: productId }]);
-    
+
     if (error) throw error;
     return favoriteActions.getFavorites();
   },
@@ -178,7 +274,7 @@ export const favoriteActions = {
       .delete()
       .eq('user_id', session.session.user.id)
       .eq('product_id', productId);
-    
+
     if (error) throw error;
     return favoriteActions.getFavorites();
   },
@@ -187,13 +283,59 @@ export const favoriteActions = {
 export const orderActions = {
   getOrders: async () => {
     const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) return [];
+
     const { data, error } = await insforge.database
       .from('orders')
-      .select('*, order_items(*, products(*))')
+      .select('*')
       .eq('user_id', session.session.user.id)
       .order('created_at', { ascending: false });
-    
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  getOrder: async (orderId) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const { data, error } = await insforge.database
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .eq('user_id', session.session.user.id)
+      .single();
+
     if (error) throw error;
     return data;
   },
+
+  createOrder: async ({ shipping, payment, items, total }) => {
+    const { data: session } = await insforge.auth.getCurrentSession();
+    if (!session?.session) throw new Error('Authentication required');
+
+    const userId = session.session.user.id;
+    const orderId = `ord_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const orderNumber = `ORD-${Date.now()}`;
+
+    // Create order
+    const { error } = await insforge.database
+      .from('orders')
+      .insert([{
+        order_id: orderId,
+        user_id: userId,
+        order_number: orderNumber,
+        items: items,
+        shipping: shipping,
+        total: total,
+        status: 'confirmed'
+      }]);
+
+    if (error) throw error;
+
+    // Clear cart after successful order
+    await cartActions.clearCart();
+
+    return { order_id: orderId, order_number: orderNumber };
+  }
 };
