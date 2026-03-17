@@ -35,8 +35,10 @@ const Login = () => {
     setError(null);
     try {
       await login(formData.email, formData.password);
-      // Forzar redirección después del login exitoso
-      window.location.href = redirect;
+      // Pequeña pausa para asegurar que el estado se actualizó
+      setTimeout(() => {
+        window.location.href = redirect;
+      }, 100);
     } catch (err) {
       console.error('Login failed:', err);
       setError('Email o contraseña incorrectos');

@@ -70,13 +70,15 @@ const Register = () => {
 
         setLoading(true);
         try {
-            const user = await register(formData.name, formData.email, formData.password);
-            // Check if user is authenticated (means no email verification was required)
-            if (user && !user.session && !localStorage.getItem('session_token')) {
-                setError('¡Cuenta creada! Por favor, verifica tu email para activar tu cuenta antes de iniciar sesión.');
+            const result = await register(formData.name, formData.email, formData.password);
+
+            // Check if email verification is required
+            if (result?.requireEmailVerification) {
+                setError('¡Cuenta creada! Por favor, verifica tu email para activar tu cuenta.');
                 setLoading(false);
             } else {
-                // If authenticated, AuthContext handles the redirect via useEffect
+                // User is authenticated, redirect
+                window.location.href = redirect;
             }
         } catch (err) {
             console.error('Registration failed:', err);
