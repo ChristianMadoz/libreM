@@ -106,7 +106,7 @@ export const productActions = {
     const { data, error } = await insforge.database
       .from('products')
       .select('*, categories(*)')
-      .eq('id', id)
+      .eq('product_id', id)
       .single();
     if (error) throw error;
     return data;
