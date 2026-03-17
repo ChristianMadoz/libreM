@@ -36,13 +36,20 @@ const Admin = () => {
                 productsAPI.getProducts(),
                 productsAPI.getCategories()
             ]);
-            setProducts(productsData);
-            setCategories(categoriesData);
+            console.log('[Admin] Productos cargados:', productsData);
+            console.log('[Admin] Categorías cargadas:', categoriesData);
 
-            const lowStockProducts = productsData.filter(p => p.stock < 10);
+            // API returns { products: [...] } and { categories: [...] }
+            const productsList = productsData.products || productsData;
+            const categoriesList = categoriesData.categories || categoriesData;
+
+            setProducts(productsList);
+            setCategories(categoriesList);
+
+            const lowStockProducts = productsList.filter(p => p.stock < 10);
 
             setStats({
-                totalProducts: productsData.length,
+                totalProducts: productsList.length,
                 lowStock: lowStockProducts.length,
                 totalOrders: 0,
                 totalRevenue: 0
@@ -56,19 +63,36 @@ const Admin = () => {
 
     const handleCreateProduct = async (e) => {
         e.preventDefault();
+        console.log('[Admin] Creando producto:', productForm);
+        console.log('[Admin] Categorías disponibles:', categories);
+
         setFormLoading(true);
         try {
             const selectedCategory = categories.find(c => c.name === productForm.category);
+            console.log('[Admin] Categoría seleccionada:', selectedCategory);
+
             const productData = {
                 ...productForm,
                 price: parseFloat(productForm.price),
                 stock: parseInt(productForm.stock),
                 category_id: selectedCategory ? selectedCategory.category_id : 1,
+                category: selectedCategory ? selectedCategory.name : productForm.category,
                 free_shipping: true,
-                verified: true
+                verified: true,
+                rating: 5.0,
+                reviews: 0,
+                sold: 0,
+                original_price: null,
+                discount: 0,
+                features: [],
+                colors: ['Default']
             };
 
-            await productsAPI.createProduct(productData);
+            console.log('[Admin] Datos a enviar:', productData);
+
+            const result = await productsAPI.createProduct(productData);
+            console.log('[Admin] Producto creado:', result);
+
             alert('Producto creado exitosamente');
             setShowProductModal(false);
             setProductForm({
@@ -82,8 +106,8 @@ const Admin = () => {
             });
             await loadDashboardData();
         } catch (error) {
-            console.error('Error creating product:', error);
-            alert('Error al crear el producto');
+            console.error('[Admin] Error creando producto:', error);
+            alert('Error al crear el producto: ' + (error.message || 'Error desconocido'));
         } finally {
             setFormLoading(false);
         }
