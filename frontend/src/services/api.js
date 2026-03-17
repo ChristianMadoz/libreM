@@ -140,7 +140,7 @@ export const cartActions = {
     // Then get cart items with products
     const { data, error } = await insforge.database
       .from('cart_items')
-      .select('*, products(*)')
+      .select('*, products:product_id(*)')
       .eq('cart_id', cart.cart_id);
 
     if (error) throw error;
@@ -290,7 +290,7 @@ export const favoriteActions = {
 
     const { data, error } = await insforge.database
       .from('favorites')
-      .select('*, products(*)')
+      .select('*, products:product_id(*)')
       .eq('user_id', session.session.user.id);
 
     if (error) throw error;
