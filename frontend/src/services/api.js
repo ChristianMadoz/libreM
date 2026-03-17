@@ -119,6 +119,72 @@ export const productActions = {
     if (error) throw error;
     return { categories: data || [] };
   },
+  createProduct: async (productData) => {
+    const product_id = `MLB${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const { data, error } = await insforge.database
+      .from('products')
+      .insert([{
+        product_id,
+        ...productData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  updateProduct: async (id, updates) => {
+    const { data, error } = await insforge.database
+      .from('products')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('product_id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  deleteProduct: async (id) => {
+    const { error } = await insforge.database
+      .from('products')
+      .delete()
+      .eq('product_id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+  createCategory: async (categoryData) => {
+    const { data, error } = await insforge.database
+      .from('categories')
+      .insert([{
+        name: categoryData.name,
+        icon: categoryData.icon || 'Tag'
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  updateCategory: async (id, updates) => {
+    const { data, error } = await insforge.database
+      .from('categories')
+      .update(updates)
+      .eq('category_id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  deleteCategory: async (id) => {
+    const { error } = await insforge.database
+      .from('categories')
+      .delete()
+      .eq('category_id', id);
+    if (error) throw error;
+    return { success: true };
+  },
 };
 
 export const cartActions = {
