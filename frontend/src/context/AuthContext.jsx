@@ -42,15 +42,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
+    console.log('[AuthContext] login() llamado con:', email);
     try {
       const data = await authActions.login({ email, password });
+      console.log('[AuthContext] login() respuesta:', data);
       setUser(data.user);
       setIsAuthenticated(!!data.session);
+      console.log('[AuthContext] Estado actualizado:', {
+        user: data.user,
+        isAuthenticated: !!data.session
+      });
       // Verificar que la sesión se guardó correctamente
       await checkAuth();
+      console.log('[AuthContext] checkAuth() completado');
       return data.user;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('[AuthContext] login() error:', error);
       throw error;
     }
   };

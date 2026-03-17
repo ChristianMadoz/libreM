@@ -33,14 +33,17 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    console.log('[Login] Intentando login con:', formData.email);
     try {
-      await login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
+      console.log('[Login] Login exitoso, resultado:', result);
+      console.log('[Login] Redirigiendo a:', redirect);
       // Pequeña pausa para asegurar que el estado se actualizó
       setTimeout(() => {
         window.location.href = redirect;
       }, 100);
     } catch (err) {
-      console.error('Login failed:', err);
+      console.error('[Login] Error:', err);
       setError('Email o contraseña incorrectos');
       setLoading(false);
     }
