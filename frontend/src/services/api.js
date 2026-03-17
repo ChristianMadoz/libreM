@@ -109,7 +109,7 @@ export const productActions = {
       .eq('product_id', id)
       .single();
     if (error) throw error;
-    return data;
+    return { product: data };
   },
   getCategories: async () => {
     const { data, error } = await insforge.database

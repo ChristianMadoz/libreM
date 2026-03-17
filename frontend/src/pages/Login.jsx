@@ -41,7 +41,7 @@ const Login = () => {
       // Pequeña pausa para asegurar que el estado se actualizó
       setTimeout(() => {
         window.location.href = redirect;
-      }, 100);
+      }, 10);
     } catch (err) {
       console.error('[Login] Error:', err);
       setError('Email o contraseña incorrectos');
