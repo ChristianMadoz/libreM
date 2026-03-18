@@ -40,16 +40,29 @@ export const authActions = {
     });
     if (error) throw error;
 
+    // Create profile in users table if user was created
+    if (data?.user) {
+      try {
+        await insforge.database.from('users').insert([{
+          user_id: data.user.id,
+          email: email,
+          name: name,
+          created_at: new Date().toISOString()
+        }]);
+      } catch (dbError) {
+        console.error('Error creating user profile:', dbError);
+        // Don't fail the whole registration if profile creation fails
+      }
+    }
+
     // Check if email verification is required
     if (data?.requireEmailVerification) {
-      // Return verification required flag
-      return {
+       return {
         requireEmailVerification: true,
         email: email
       };
     }
 
-    // Return structure compatible with existing AuthContext
     return {
       user: data.user,
       token: data.session?.accessToken,
@@ -125,9 +138,7 @@ export const productActions = {
       .from('products')
       .insert([{
         product_id,
-        ...productData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        ...productData
       }])
       .select()
       .single();
