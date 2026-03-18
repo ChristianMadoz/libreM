@@ -110,7 +110,8 @@ const Profile = () => {
         );
     }
 
-    const currentProfileImage = profileData?.picture || user.picture || 'https://github.com/shadcn.png';
+    const displayName = profileData?.name || user.name || 'Usuario';
+    const displayEmail = profileData?.email || user.email;
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -134,7 +135,7 @@ const Profile = () => {
                             <div className="relative group">
                                 <img
                                     src={currentProfileImage}
-                                    alt={user.name}
+                                    alt={displayName}
                                     className="w-24 h-24 rounded-full border-2 border-gray-200 object-cover"
                                 />
                                 <button
@@ -157,8 +158,8 @@ const Profile = () => {
                                 />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-bold text-gray-900">{user.name}</h3>
-                                <p className="text-gray-600">{user.email}</p>
+                                <h3 className="text-2xl font-bold text-gray-900">{displayName}</h3>
+                                <p className="text-gray-600">{displayEmail}</p>
                                 <p className="text-sm text-gray-500 mt-1">ID: {user.user_id}</p>
                             </div>
                         </div>
@@ -188,7 +189,20 @@ const Profile = () => {
                                     />
                                     <p className="text-xs text-gray-500 mt-1">El email no puede ser modificado</p>
                                 </div>
-                                <Button className="bg-[#3483FA] hover:bg-[#2968C8]">
+                                <Button className="bg-[#3483FA] hover:bg-[#2968C8]" onClick={async () => {
+                                    try {
+                                        const { error } = await insforge.database
+                                            .from('users')
+                                            .update({ name: formData.name })
+                                            .eq('user_id', user.user_id);
+                                        if (error) throw error;
+                                        toast.success('Perfil actualizado');
+                                        setEditing(false);
+                                        fetchInsforgeProfile();
+                                    } catch (err) {
+                                        toast.error('No se pudo actualizar el perfil');
+                                    }
+                                }}>
                                     Guardar Cambios
                                 </Button>
                             </div>
@@ -196,11 +210,11 @@ const Profile = () => {
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <p className="text-gray-600 font-medium">Nombre completo</p>
-                                    <p className="text-gray-900">{user.name}</p>
+                                    <p className="text-gray-900">{displayName}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-600 font-medium">Email</p>
-                                    <p className="text-gray-900">{user.email}</p>
+                                    <p className="text-gray-900">{displayEmail}</p>
                                 </div>
                             </div>
                         )}
