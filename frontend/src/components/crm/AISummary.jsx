@@ -52,6 +52,7 @@ export function AISummary({ deal, notes, tasks }) {
         if (deal && !summary) {
             generateSummary();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [deal]);
 
     if (!deal) return null;
@@ -67,7 +68,7 @@ export function AISummary({ deal, notes, tasks }) {
                     <Sparkles className="w-5 h-5 text-indigo-400" />
                     AI Deal Intelligence
                 </h3>
-                <button 
+                <button
                     onClick={generateSummary}
                     disabled={loading}
                     className="p-1.5 hover:bg-white/5 rounded-lg text-neutral-400 hover:text-white transition-colors"

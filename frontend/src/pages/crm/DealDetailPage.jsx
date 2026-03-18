@@ -45,6 +45,7 @@ export function DealDetailPage() {
 
     useEffect(() => {
         fetchDealData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const addNote = async () => {
@@ -184,7 +185,7 @@ export function DealDetailPage() {
 
                 {/* RIGHT COLUMN: Activity Timeline & Tasks */}
                 <div className="lg:col-span-2 space-y-6 flex flex-col">
-                    
+
                     {/* AI Insights Section */}
                     <AISummary deal={deal} notes={notes} tasks={tasks} />
 
