@@ -24,6 +24,8 @@ export const CartProvider = ({ children }) => {
     const initData = async () => {
       setLoading(true);
       if (isAuthenticated) {
+        // First sync any local items to backend
+        await syncLocalCartToBackend();
         await Promise.all([loadCart(), loadFavorites()]);
       } else {
         // Load from local storage for unauthenticated users
@@ -46,6 +48,27 @@ export const CartProvider = ({ children }) => {
     };
     initData();
   }, [isAuthenticated, user]);
+
+  const syncLocalCartToBackend = async () => {
+    const localCartItems = getMockCart();
+    if (localCartItems.length === 0) return;
+
+    console.log('[CartContext] Sincronizando carrito local con backend:', localCartItems);
+    try {
+      for (const item of localCartItems) {
+        await cartActions.addToCart({
+          product_id: item.id,
+          quantity: item.quantity,
+          color: item.color
+        });
+      }
+      // Limpiar el carrito local tras el sync exitoso
+      setMockCart([]);
+      console.log('[CartContext] Sincronización completada');
+    } catch (error) {
+      console.error('[CartContext] Error sincronizando carrito:', error);
+    }
+  };
 
   const loadFavorites = async () => {
     try {

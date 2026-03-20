@@ -9,7 +9,7 @@ import { Label } from '../components/ui/label';
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const redirect = searchParams.get('redirect') || '/profile';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { isAuthenticated, loading: authLoading, login, devLogin } = useAuth();
@@ -25,7 +25,8 @@ const Login = () => {
   // If already authenticated, redirect
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      navigate(redirect);
+      console.log('[Login] Usuario ya autenticado, redirigiendo a:', redirect);
+      navigate(redirect, { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate, redirect]);
 
@@ -35,13 +36,11 @@ const Login = () => {
     setError(null);
     console.log('[Login] Intentando login con:', formData.email);
     try {
-      const result = await login(formData.email, formData.password);
-      console.log('[Login] Login exitoso, resultado:', result);
-      console.log('[Login] Redirigiendo a:', redirect);
-      // Pequeña pausa para asegurar que el estado se actualizó
-      setTimeout(() => {
-        window.location.href = redirect;
-      }, 10);
+      await login(formData.email, formData.password);
+      console.log('[Login] Login exitoso, AuthContext debería actualizarse y disparar el redirect');
+      // No necesitamos window.location.href ni navigate manual aquí, 
+      // el useEffect con [isAuthenticated] se encargará de la redirección
+      // una vez que el contexto se actualice.
     } catch (err) {
       console.error('[Login] Error:', err);
       setError('Email o contraseña incorrectos');
