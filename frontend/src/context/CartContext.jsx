@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { cartActions, favoriteActions } from '../services/api';
+import { cartActions, favoriteActions, productActions } from '../services/api';
 import { useAuth } from './AuthContext';
-import { getMockCart, setMockCart, getMockFavorites, setMockFavorites, mockProducts } from '../mock';
+import { getMockCart, setMockCart, getMockFavorites, setMockFavorites } from '../mock';
 
 const CartContext = createContext();
 
@@ -76,10 +76,8 @@ export const CartProvider = ({ children }) => {
       // data should contain {favorites: [...ids], products: [...products]}
       setFavorites(data.products || []);
     } catch (error) {
-      console.warn('Backend favorites failed, using mock');
-      const localFavs = getMockFavorites();
-      const favProducts = mockProducts.filter(p => localFavs.includes(p.id));
-      setFavorites(favProducts.map(p => ({ ...p, product_id: p.id })));
+      console.warn('Backend favorites failed');
+      setFavorites([]);
     }
   };
 
@@ -93,18 +91,8 @@ export const CartProvider = ({ children }) => {
         updated_at: cartData.updated_at
       });
     } catch (error) {
-      console.warn('Backend cart failed, using mock');
-      const localCartItems = getMockCart();
-      setCart({
-        items: localCartItems.map(item => ({
-          ...item,
-          product_id: item.id,
-          cart_quantity: item.quantity,
-          cart_color: item.color,
-          free_shipping: item.freeShipping
-        })),
-        total: localCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-      });
+      console.warn('Backend cart failed');
+      setCart({ items: [], total: 0 });
     }
   };
 
@@ -124,18 +112,36 @@ export const CartProvider = ({ children }) => {
       }
     }
 
-    // Mock Fallback
+    // Mock Fallback (Local Storage for unauthenticated)
     const localCart = getMockCart();
-    const product = mockProducts.find(p => p.id === productId);
+    
+    // Fetch product info if we don't have it (needed for price/name in local cart)
+    let product;
+    try {
+      const response = await productActions.getProduct(productId);
+      product = response.product;
+    } catch (err) {
+      console.error('Failed to fetch product for local cart:', err);
+      return;
+    }
+
     if (!product) return;
 
-    const existingIndex = localCart.findIndex(item => item.id === productId && item.color === color);
+    const existingIndex = localCart.findIndex(item => (item.product_id || item.id) === productId && item.color === color);
     let newItems;
     if (existingIndex > -1) {
       newItems = [...localCart];
       newItems[existingIndex].quantity += quantity;
     } else {
-      newItems = [...localCart, { ...product, quantity, color }];
+      newItems = [...localCart, { 
+        ...product, 
+        id: productId, 
+        product_id: productId,
+        quantity, 
+        color,
+        cart_quantity: quantity,
+        cart_color: color
+      }];
     }
 
     setMockCart(newItems);

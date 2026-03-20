@@ -40,20 +40,8 @@ export const authActions = {
     });
     if (error) throw error;
 
-    // Create profile in users table if user was created
-    if (data?.user) {
-      try {
-        await insforge.database.from('users').insert([{
-          user_id: data.user.id,
-          email: email,
-          name: name,
-          created_at: new Date().toISOString()
-        }]);
-      } catch (dbError) {
-        console.error('Error creating user profile:', dbError);
-        // Don't fail the whole registration if profile creation fails
-      }
-    }
+    // Profile creation is now handled by syncProfile in AuthContext
+    // we keep this as a secondary check if needed or just let AuthContext handle it on mount
 
     // Check if email verification is required
     if (data?.requireEmailVerification) {
@@ -97,6 +85,42 @@ export const authActions = {
   logout: async () => {
     const { error } = await insforge.auth.signOut();
     if (error) throw error;
+  },
+  syncProfile: async () => {
+    const { data: sessionData, error: sessionError } = await insforge.auth.getCurrentSession();
+    if (sessionError || !sessionData?.session) return null;
+
+    const user = sessionData.session.user;
+    
+    // Check if profile exists
+    const { data: profile, error: fetchError } = await insforge.database
+      .from('users')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !profile) {
+      // Create profile
+      const { data: newProfile, error: insertError } = await insforge.database
+        .from('users')
+        .insert([{
+          user_id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0],
+          created_at: new Date().toISOString(),
+          metadata: { provider: user.app_metadata?.provider || 'email' }
+        }])
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('Error creating user profile:', insertError);
+        return null;
+      }
+      return newProfile;
+    }
+
+    return profile;
   }
 };
 

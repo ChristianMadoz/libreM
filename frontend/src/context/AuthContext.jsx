@@ -27,7 +27,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const session = await authActions.getSession();
       if (session?.user) {
-        setUser(session.user);
+        // Sync profile data from database
+        const profile = await authActions.syncProfile();
+        setUser({ ...session.user, ...profile });
         setIsAuthenticated(true);
       } else {
         setUser(null);

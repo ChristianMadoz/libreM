@@ -22,23 +22,31 @@ async function checkBackend() {
         // Try to access tables via SDK-style REST API
         console.log('\n📋 Probando acceso a tablas:\n');
         
-        const tablesToCheck = ['categories', 'products', 'companies', 'contacts', 'deals'];
+        const tablesToCheck = ['categories', 'products'];
         
         for (const table of tablesToCheck) {
             try {
-                const response = await fetch(`${BASE_URL}/api/v1/rest/${table}?select=*&limit=0`, {
+                // Check FastAPI endpoint
+                const apiResponse = await fetch(`${BASE_URL}/api/${table}`, {
+                    headers: {
+                        'Authorization': `Bearer ${ANON_KEY}`,
+                    }
+                });
+                console.log(`  FastAPI ${table}: ${apiResponse.status} ${apiResponse.statusText}`);
+
+                // Check Raw InsForge (PostgREST) endpoint
+                const rawResponse = await fetch(`${BASE_URL}/rest/v1/${table}?select=*&limit=1`, {
                     headers: {
                         'apikey': ANON_KEY,
                         'Authorization': `Bearer ${ANON_KEY}`,
                         'Prefer': 'count=exact'
                     }
                 });
+                console.log(`  Raw InsForge ${table}: ${rawResponse.status} ${rawResponse.statusText}`);
                 
-                console.log(`  ${table}: ${response.status} ${response.statusText}`);
-                
-                if (!response.ok) {
-                    const text = await response.text();
-                    console.log(`    Response: ${text.substring(0, 200)}`);
+                if (!rawResponse.ok) {
+                    const text = await rawResponse.text();
+                    console.log(`    Raw Response Error: ${text.substring(0, 100)}`);
                 }
             } catch (err) {
                 console.log(`  ${table}: ERROR - ${err.message}`);

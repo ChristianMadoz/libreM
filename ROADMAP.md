@@ -2,7 +2,7 @@
 
 ## Estado Actual
 
-El proyecto se encuentra en una fase de transición, moviéndose de datos simulados (mocks) a una implementación real con base de datos MongoDB. El Frontend y Backend base están configurados.
+El proyecto ha completado la Fase 3. La autenticación está integrada con InsForge, incluyendo sincronización de perfiles en la base de datos y seguridad RLS. El catálogo y el carrito utilizan datos reales.
 
 ## Fases del Proyecto
 
@@ -13,18 +13,19 @@ El proyecto se encuentra en una fase de transición, moviéndose de datos simula
 - [x] Definición de esquemas y modelos (`models.py`).
 - [x] Creación de documentación básica (`README.md`, `contracts.md`).
 
-### Fase 2: Backend y Base de Datos (🚧 En Progreso)
+### Fase 2: Backend y Base de Datos (✅ Completado)
 
 - [x] **Configuración BD**: Verificar conexión y tablas en PostgreSQL (InsForge).
 - [x] **Seed Data**: Ejecutar `backend/seed_db.js` (Node.js workaround) para poblar la base de datos.
-- [ ] **Productos**: Confirmar que los endpoints de productos lean de PostgreSQL en lugar de mocks.
-- [ ] **Categorías**: Confirmar que los endpoints de categorías lean de PostgreSQL.
+- [x] **Productos**: Confirmar que los endpoints de productos lean de PostgreSQL en lugar de mocks.
+- [x] **Categorías**: Confirmar que los endpoints de categorías lean de PostgreSQL.
 
-### Fase 3: Autenticación y Usuarios
+### Fase 3: Autenticación y Usuarios (✅ Completado)
 
-- [ ] **Auth**: Integración completa de Google Identity (Emergent Auth).
-- [ ] **Persistencia**: Guardar usuarios en colección `users`.
-- [ ] **Sesiones**: Manejo seguro de tokens de sesión.
+- [x] **Auth**: Integración completa de Google Identity (vía SDK).
+- [x] **Persistencia**: Guardar usuarios en tabla `users` mediante `syncProfile`.
+- [x] **Sesiones**: Manejo seguro de tokens de sesión integrado con el SDK.
+- [x] **Seguridad**: Políticas RLS implementadas para proteger perfiles.
 
 ### Fase 4: Funcionalidades de Compras
 
