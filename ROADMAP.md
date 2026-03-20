@@ -2,7 +2,7 @@
 
 ## Estado Actual
 
-El proyecto ha completado la Fase 3. La autenticación está integrada con InsForge, incluyendo sincronización de perfiles en la base de datos y seguridad RLS. El catálogo y el carrito utilizan datos reales.
+El proyecto ha completado la Fase 4. Carrito, favoritos, checkout y órdenes están conectados a la base de datos real. Solo queda la Fase 5 de Polish y QA.
 
 ## Fases del Proyecto
 
@@ -27,12 +27,12 @@ El proyecto ha completado la Fase 3. La autenticación está integrada con InsFo
 - [x] **Sesiones**: Manejo seguro de tokens de sesión integrado con el SDK.
 - [x] **Seguridad**: Políticas RLS implementadas para proteger perfiles.
 
-### Fase 4: Funcionalidades de Compras
+### Fase 4: Funcionalidades de Compras (✅ Completado)
 
-- [ ] **Carrito**: Persistencia del carrito en servidor (sincronizado entre dispositivos).
-- [ ] **Favoritos**: CRUD de favoritos vinculado via base de datos.
-- [ ] **Checkout**: Creación de órdenes reales y validación de stock.
-- [ ] **Historial**: Visualización de órdenes pasadas desde la BD.
+- [x] **Carrito**: Persistencia del carrito en servidor (sincronizado entre dispositivos).
+- [x] **Favoritos**: CRUD de favoritos vinculado via base de datos.
+- [x] **Checkout**: Creación de órdenes reales y validación de stock.
+- [x] **Historial**: Visualización de órdenes pasadas desde la BD.
 
 ### Fase 5: Polish & QA
 

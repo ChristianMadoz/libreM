@@ -24,7 +24,7 @@ const Orders = () => {
         setPageLoading(true);
         try {
           const data = await orderActions.getOrders();
-          setOrders(data.orders || []);
+          setOrders(Array.isArray(data) ? data : (data.orders || []));
         } catch (error) {
           console.error('Error fetching orders:', error);
         } finally {
@@ -93,12 +93,12 @@ const Orders = () => {
 
         <div className="space-y-6">
           {orders.map((order) => (
-            <Card key={order.id} className="p-6 bg-white">
+            <Card key={order.order_id || order.id} className="p-6 bg-white">
               <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold text-gray-900">
-                      Pedido #{order.id}
+                      Pedido #{order.order_number || order.order_id || order.id}
                     </h3>
                     <Badge className={`${order.status === 'cancelled' ? 'bg-red-500' : 'bg-green-500'} text-white`}>
                       {order.status === 'confirmed' ? 'Confirmado' : order.status}
@@ -163,7 +163,7 @@ const Orders = () => {
                       <Button
                         variant="outline"
                         className="border-[#3483FA] text-[#3483FA] hover:bg-blue-50"
-                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onClick={() => navigate(`/orders/${order.order_id || order.id}`)}
                       >
                         Ver detalles
                         <ChevronRight className="w-4 h-4 ml-2" />
