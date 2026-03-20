@@ -1,4 +1,5 @@
 import React from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './App.css';
@@ -92,13 +93,15 @@ function AppContent() {
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <AuthProvider>
-          <CartProvider>
-            <AppContent />
-          </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <CartProvider>
+              <AppContent />
+            </CartProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
     </div>
   );
 }

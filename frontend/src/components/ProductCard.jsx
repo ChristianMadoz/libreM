@@ -35,6 +35,7 @@ const ProductCard = ({ product, onFavoriteChange }) => {
             src={product.image}
             alt={product.name}
             className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
           />
           {product.discount > 0 && (
             <Badge className="absolute top-3 left-3 bg-green-500 hover:bg-green-600 text-white font-semibold">

@@ -91,6 +91,17 @@ const ProductDetail = () => {
   const addToCart = async () => {
     setIsAdding(true);
     try {
+      // Validate stock in real-time
+      const freshData = await productActions.getProduct(id);
+      const currentStock = freshData.product?.stock || 0;
+      if (quantity > currentStock) {
+        toast({
+          title: 'Stock insuficiente',
+          description: `Solo hay ${currentStock} unidades disponibles.`,
+          variant: 'destructive'
+        });
+        return;
+      }
       await addToCartContext(productId, quantity, selectedColor);
       toast({
         title: '¡Agregado al carrito!',
@@ -142,6 +153,7 @@ const ProductDetail = () => {
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-contain"
+                  loading="lazy"
                 />
                 {product.discount > 0 && (
                   <Badge className="absolute top-4 left-4 bg-green-500 hover:bg-green-600 text-white text-lg px-4 py-2">
@@ -354,6 +366,7 @@ const ProductDetail = () => {
                       src={relatedProduct.image}
                       alt={relatedProduct.name}
                       className="w-full h-48 object-contain p-4"
+                      loading="lazy"
                     />
                     <div className="p-4">
                       <h3 className="text-sm text-gray-800 mb-2 line-clamp-2">
