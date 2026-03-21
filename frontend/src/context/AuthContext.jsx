@@ -27,17 +27,23 @@ export const AuthProvider = ({ children }) => {
     try {
       const session = await authActions.getSession();
       if (session?.user) {
-        // Sync profile data from database
-        const profile = await authActions.syncProfile();
-        setUser({ ...session.user, ...profile });
+        // Sync profile data from database safely
+        try {
+           const profile = await authActions.syncProfile();
+           setUser((prev) => ({ ...session.user, ...profile }));
+        } catch (e) {
+           console.warn('syncProfile failed, but auth persists', e);
+           setUser(session.user);
+        }
         setIsAuthenticated(true);
       } else {
+        // Solo desloguear si genuinamente la sesión regresó nula de local y de API
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
+      console.error('[AuthContext] checkAuth error:', error);
+      // No forzamos setIsAuthenticated(false) aquí si ya existía un token para no corromper el pase del SPA.
     } finally {
       setLoading(false);
     }
