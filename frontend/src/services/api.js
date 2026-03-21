@@ -91,7 +91,7 @@ export const authActions = {
     return { success: true };
   },
   getMe: async () => {
-    const { data, error } = await insforge.auth.getCurrentSession();
+    const { data, error } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (error || !data.session) throw error || new Error('No session');
     return data.session.user;
   },
@@ -112,7 +112,7 @@ export const authActions = {
       }
     }
 
-    const { data, error } = await insforge.auth.getCurrentSession();
+    const { data, error } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (data?.session) {
       return data.session;
     }
@@ -129,7 +129,7 @@ export const authActions = {
     if (error) throw error;
   },
   syncProfile: async () => {
-    const { data: sessionData, error: sessionError } = await insforge.auth.getCurrentSession();
+    const { data: sessionData, error: sessionError } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (sessionError || !sessionData?.session) return null;
 
     const user = sessionData.session.user;
@@ -266,7 +266,7 @@ export const productActions = {
 
 export const cartActions = {
   getCart: async () => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) return { items: [], total: 0 };
 
     const userId = session.session.user.id;
@@ -293,7 +293,7 @@ export const cartActions = {
   },
 
   addToCart: async ({ product_id, quantity, color }) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const userId = session.session.user.id;
@@ -354,7 +354,7 @@ export const cartActions = {
   },
 
   updateItem: async (productId, quantity, color) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const userId = session.session.user.id;
@@ -379,7 +379,7 @@ export const cartActions = {
   },
 
   removeItem: async (productId, color) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const userId = session.session.user.id;
@@ -404,7 +404,7 @@ export const cartActions = {
   },
 
   clearCart: async () => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const userId = session.session.user.id;
@@ -428,7 +428,7 @@ export const cartActions = {
 
 export const favoriteActions = {
   getFavorites: async () => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) return { products: [] };
 
     const { data, error } = await insforge.database
@@ -440,7 +440,7 @@ export const favoriteActions = {
     return { products: data.map(f => f.products) || [] };
   },
   addFavorite: async (productId) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     const { error } = await insforge.database
       .from('favorites')
       .insert([{ user_id: session.session.user.id, product_id: productId }]);
@@ -449,7 +449,7 @@ export const favoriteActions = {
     return favoriteActions.getFavorites();
   },
   removeFavorite: async (productId) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     const { error } = await insforge.database
       .from('favorites')
       .delete()
@@ -463,7 +463,7 @@ export const favoriteActions = {
 
 export const orderActions = {
   getOrders: async () => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) return [];
 
     const { data, error } = await insforge.database
@@ -477,7 +477,7 @@ export const orderActions = {
   },
 
   getOrder: async (orderId) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const { data, error } = await insforge.database
@@ -492,7 +492,7 @@ export const orderActions = {
   },
 
   createOrder: async ({ shipping, payment, items, total }) => {
-    const { data: session } = await insforge.auth.getCurrentSession();
+    const { data: session } = await (typeof insforge.auth.getCurrentSession === 'function' ? insforge.auth.getCurrentSession() : insforge.auth.refreshSession());
     if (!session?.session) throw new Error('Authentication required');
 
     const userId = session.session.user.id;
