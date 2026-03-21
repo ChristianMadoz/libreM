@@ -13,11 +13,20 @@ export const authActions = {
   login: async ({ email, password }) => {
     const { data, error } = await insforge.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // Return structure compatible with existing AuthContext
+    
+    const token = data.accessToken;
+    if (token) {
+      localStorage.setItem('session_token', token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (insforge.tokenManager && typeof insforge.tokenManager.setAccessToken === 'function') {
+        insforge.tokenManager.setAccessToken(token);
+      }
+    }
+    
     return {
       user: data.user,
-      token: data.accessToken,
-      session: data.accessToken ? { accessToken: data.accessToken, user: data.user } : null
+      token: token,
+      session: token ? { accessToken: token, user: data.user } : null
     };
   },
   loginGoogle: async () => {
@@ -51,10 +60,19 @@ export const authActions = {
       };
     }
 
+    const token = data.accessToken;
+    if (token) {
+      localStorage.setItem('session_token', token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (insforge.tokenManager && typeof insforge.tokenManager.setAccessToken === 'function') {
+        insforge.tokenManager.setAccessToken(token);
+      }
+    }
+
     return {
       user: data.user,
-      token: data.accessToken,
-      session: data.accessToken ? { accessToken: data.accessToken, user: data.user } : null
+      token: token,
+      session: token ? { accessToken: token, user: data.user } : null
     };
   },
   verifyEmail: async ({ email, otp }) => {
@@ -78,11 +96,35 @@ export const authActions = {
     return data.session.user;
   },
   getSession: async () => {
+    // Intenta obtener la sesión desde local storage para evitar el bloqueo cross-domain de la cookie
+    const localToken = localStorage.getItem('session_token');
+    const localUser = localStorage.getItem('user');
+
+    if (localToken && localUser) {
+      try {
+        const parsedUser = JSON.parse(localUser);
+        if (insforge.tokenManager && typeof insforge.tokenManager.setAccessToken === 'function') {
+          insforge.tokenManager.setAccessToken(localToken);
+        }
+        return { accessToken: localToken, user: parsedUser };
+      } catch (e) {
+        console.warn('Error parsing local session', e);
+      }
+    }
+
     const { data, error } = await insforge.auth.getCurrentSession();
+    if (data?.session) {
+      return data.session;
+    }
     if (error) throw error;
-    return data.session;
+    return null;
   },
   logout: async () => {
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user');
+    if (insforge.tokenManager && typeof insforge.tokenManager.clearSession === 'function') {
+      insforge.tokenManager.clearSession();
+    }
     const { error } = await insforge.auth.signOut();
     if (error) throw error;
   },
