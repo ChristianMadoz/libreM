@@ -16,8 +16,8 @@ export const authActions = {
     // Return structure compatible with existing AuthContext
     return {
       user: data.user,
-      token: data.session?.accessToken,
-      session: data.session
+      token: data.accessToken,
+      session: data.accessToken ? { accessToken: data.accessToken, user: data.user } : null
     };
   },
   loginGoogle: async () => {
@@ -53,8 +53,8 @@ export const authActions = {
 
     return {
       user: data.user,
-      token: data.session?.accessToken,
-      session: data.session
+      token: data.accessToken,
+      session: data.accessToken ? { accessToken: data.accessToken, user: data.user } : null
     };
   },
   verifyEmail: async ({ email, otp }) => {

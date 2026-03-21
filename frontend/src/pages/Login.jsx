@@ -37,10 +37,9 @@ const Login = () => {
     console.log('[Login] Intentando login con:', formData.email);
     try {
       await login(formData.email, formData.password);
-      console.log('[Login] Login exitoso, AuthContext debería actualizarse y disparar el redirect');
-      // No necesitamos window.location.href ni navigate manual aquí, 
-      // el useEffect con [isAuthenticated] se encargará de la redirección
-      // una vez que el contexto se actualice.
+      console.log('[Login] Login exitoso, redirigiendo...');
+      setLoading(false);
+      navigate(redirect, { replace: true });
     } catch (err) {
       console.error('[Login] Error:', err);
       setError('Email o contraseña incorrectos');
