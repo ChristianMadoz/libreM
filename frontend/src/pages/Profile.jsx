@@ -112,6 +112,7 @@ const Profile = () => {
 
     const displayName = profileData?.name || user.name || 'Usuario';
     const displayEmail = profileData?.email || user.email;
+    const currentProfileImage = profileData?.picture || user.user_metadata?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random';
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">
