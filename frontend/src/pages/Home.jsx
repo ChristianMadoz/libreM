@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { productActions } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { ChevronRight } from 'lucide-react';

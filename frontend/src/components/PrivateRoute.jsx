@@ -1,14 +1,17 @@
+'use client';
+
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 
 /**
  * Componente para proteger rutas que requieren autenticación
  * Redirige a /login si el usuario no está autenticado
  */
-const PrivateRoute = ({ children, redirectTo = '/login' }) => {
+export default function PrivateRoute({ children, redirectTo = '/login' }) {
   const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
 
   // Mientras carga, mostrar spinner
   if (loading) {
@@ -21,12 +24,11 @@ const PrivateRoute = ({ children, redirectTo = '/login' }) => {
 
   // Si no está autenticado, redirigir al login con el redirect apropiado
   if (!isAuthenticated) {
-    const redirectParam = location.pathname + location.search;
-    return <Navigate to={`${redirectTo}?redirect=${encodeURIComponent(redirectParam)}`} replace />;
+    const redirectParam = pathname;
+    router.replace(`${redirectTo}?redirect=${encodeURIComponent(redirectParam)}`);
+    return null;
   }
 
   // Si está autenticado, renderizar el componente
   return children;
-};
-
-export default PrivateRoute;
+}

@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
 import { productActions } from '../services/api';
 import { Heart, Truck, ShoppingCart, Shield, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +12,8 @@ import { Card } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 
 const ProductDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const params = useParams();
+  const router = useRouter();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { cart, addToCart: addToCartContext, favorites, addFavorite, removeFavorite } = useCart();
@@ -22,6 +24,7 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const id = params.id;
 
   useEffect(() => {
     const fetchProductData = async () => {
