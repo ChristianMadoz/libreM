@@ -107,11 +107,11 @@ const Checkout = () => {
         },
         items: cartItems.map(item => ({
           product_id: item.product_id,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          quantity: item.cart_quantity,
-          color: item.cart_color
+          name: item.name || item.products?.name,
+          price: item.price || item.products?.price,
+          image: item.image || item.products?.image,
+          quantity: item.cart_quantity || item.quantity,
+          color: item.cart_color || item.color
         })),
         total: total
       };
@@ -420,15 +420,15 @@ const Checkout = () => {
                 {cartItems.map((item, index) => (
                   <div key={index} className="flex gap-3">
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.image || item.products?.image}
+                      alt={item.name || item.products?.name}
                       className="w-16 h-16 object-contain bg-gray-50 rounded"
                     />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-800 line-clamp-2">{item.name}</p>
-                      <p className="text-sm text-gray-600">Cantidad: {item.cart_quantity}</p>
+                      <p className="text-sm text-gray-800 line-clamp-2">{item.name || item.products?.name}</p>
+                      <p className="text-sm text-gray-600">Cantidad: {item.cart_quantity || item.quantity}</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {formatPrice(item.price * item.cart_quantity)}
+                        {formatPrice((Number(item.price || item.products?.price) || 0) * (Number(item.cart_quantity || item.quantity) || 1))}
                       </p>
                     </div>
                   </div>
