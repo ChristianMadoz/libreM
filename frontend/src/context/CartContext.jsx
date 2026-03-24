@@ -86,7 +86,14 @@ export const CartProvider = ({ children }) => {
       const cartData = await cartActions.getCart();
       // Backend returns { items: [...], total: ... }
       setCart({
-        items: cartData.items || [],
+        items: (cartData.items || []).map(item => ({
+          ...item,
+          ...(item.products || {}),
+          id: item.product_id,
+          cart_quantity: item.quantity,
+          cart_color: item.color,
+          free_shipping: item.products?.free_shipping
+        })),
         total: cartData.total || 0,
         updated_at: cartData.updated_at
       });

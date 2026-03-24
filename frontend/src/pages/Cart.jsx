@@ -87,8 +87,8 @@ const Cart = () => {
                     onClick={() => navigate(`/product/${item.product_id}`)}
                   >
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.image || item.products?.image}
+                      alt={item.name || item.products?.name}
                       className="w-full h-full object-contain p-2 hover:scale-105 transition-transform"
                     />
                   </div>
@@ -101,12 +101,12 @@ const Cart = () => {
                           className="text-lg font-semibold text-gray-900 mb-2 cursor-pointer hover:text-[#3483FA]"
                           onClick={() => navigate(`/product/${item.product_id}`)}
                         >
-                          {item.name}
+                          {item.name || item.products?.name}
                         </h3>
                         {item.color && (
                           <p className="text-sm text-gray-600 mb-2">Color: {item.color}</p>
                         )}
-                        {item.free_shipping && (
+                        {(item.free_shipping || item.products?.free_shipping) && (
                           <p className="text-sm text-green-600 font-semibold mb-2">
                             Envío gratis
                           </p>
@@ -124,16 +124,16 @@ const Cart = () => {
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.color, item.cart_quantity - 1)}
+                          onClick={() => updateQuantity(item.product_id, item.color, (item.cart_quantity || item.quantity) - 1)}
                           className="w-8 h-8 border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="text-lg font-semibold w-8 text-center">
-                          {item.cart_quantity}
+                          {item.cart_quantity || item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.color, item.cart_quantity + 1)}
+                          onClick={() => updateQuantity(item.product_id, item.color, (item.cart_quantity || item.quantity) + 1)}
                           className="w-8 h-8 border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
@@ -143,11 +143,11 @@ const Cart = () => {
                       {/* Price */}
                       <div className="text-right">
                         <p className="text-2xl font-bold text-gray-900">
-                          {formatPrice(item.price * item.cart_quantity)}
+                          {formatPrice((Number(item.price || item.products?.price) || 0) * (Number(item.cart_quantity || item.quantity) || 1))}
                         </p>
-                        {item.cart_quantity > 1 && (
+                        {(item.cart_quantity || item.quantity) > 1 && (
                           <p className="text-sm text-gray-500">
-                            {formatPrice(item.price)} c/u
+                            {formatPrice(item.price || item.products?.price)} c/u
                           </p>
                         )}
                       </div>

@@ -179,7 +179,7 @@ export const productActions = {
   getProducts: async (params = {}) => {
     let query = insforge.database.from('products').select('*');
 
-    if (params.category) {
+    if (params.category && params.category !== 'undefined') {
       query = query.eq('category_id', params.category);
     }
     if (params.search) {
