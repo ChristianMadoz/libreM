@@ -518,7 +518,8 @@ export const orderActions = {
         items: items,
         shipping: shipping,
         total: total,
-        status: 'confirmed'
+        status: 'confirmed',
+        created_at: new Date().toISOString()
       }]);
 
     if (error) throw error;

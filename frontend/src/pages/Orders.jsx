@@ -139,7 +139,7 @@ const Orders = () => {
                           {item.color && ` | Color: ${item.color}`}
                         </p>
                         <p className="text-lg font-semibold text-gray-900">
-                          {formatPrice(item.price * item.quantity)}
+                          {formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}
                         </p>
                       </div>
                     </div>
