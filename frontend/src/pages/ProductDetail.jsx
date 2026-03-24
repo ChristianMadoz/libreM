@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 import { productActions } from '../services/api';
 import { Heart, Truck, ShoppingCart, Shield, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +13,7 @@ import { useToast } from '../hooks/use-toast';
 
 const ProductDetail = () => {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const { cart, addToCart: addToCartContext, favorites, addFavorite, removeFavorite } = useCart();

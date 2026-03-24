@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Heart, Truck } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Card } from './ui/card';

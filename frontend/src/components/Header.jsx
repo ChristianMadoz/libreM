@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -11,7 +10,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 
 const Header = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -34,14 +33,14 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 
   const handleLogout = async () => {
     await logout();
     setShowUserMenu(false);
-    router.push('/');
+    navigate('/');
   };
 
 
