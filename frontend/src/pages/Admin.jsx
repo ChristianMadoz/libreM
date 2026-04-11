@@ -7,7 +7,7 @@ import { productActions as productsAPI } from '../services/api';
 
 const Admin = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, isAdmin, loading: authLoading } = useAuth();
     const [stats, setStats] = useState({
         totalProducts: 0,
         lowStock: 0,
@@ -127,7 +127,7 @@ const Admin = () => {
         );
     }
 
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated || !isAdmin) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">

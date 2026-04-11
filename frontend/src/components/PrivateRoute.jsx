@@ -8,8 +8,8 @@ import { useAuth } from '../context/AuthContext';
  * Componente para proteger rutas que requieren autenticación
  * Redirige a /login si el usuario no está autenticado
  */
-export default function PrivateRoute({ children, redirectTo = '/login' }) {
-  const { isAuthenticated, loading } = useAuth();
+export default function PrivateRoute({ children, redirectTo = '/login', requireAdmin = false }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -22,13 +22,19 @@ export default function PrivateRoute({ children, redirectTo = '/login' }) {
     );
   }
 
-  // Si no está autenticado, redirigir al login con el redirect apropiado
+  // Si no está autenticado, redirigir al login
   if (!isAuthenticated) {
     const redirectParam = pathname;
     navigate(`${redirectTo}?redirect=${encodeURIComponent(redirectParam)}`, { replace: true });
     return null;
   }
 
-  // Si está autenticado, renderizar el componente
+  // Si requiere admin y no lo es, redirigir a Home o un error
+  if (requireAdmin && !isAdmin) {
+    navigate('/', { replace: true });
+    return null;
+  }
+
+  // Si pasa todas las validaciones, renderizar
   return children;
 }

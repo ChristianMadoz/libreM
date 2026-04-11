@@ -107,20 +107,24 @@ const Header = () => {
                       >
                         👤 Mi perfil
                       </Link>
-                      <Link
-                        to="/admin"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        ⚙️ Panel de control
-                      </Link>
-                      <Link
-                        to="/crm"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        💼 CRM
-                      </Link>
+                      {isAdmin && (
+                        <>
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            ⚙️ Panel de control
+                          </Link>
+                          <Link
+                            to="/crm"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            💼 CRM
+                          </Link>
+                        </>
+                      )}
                       <div className="border-t border-gray-200 my-1"></div>
                       <Link
                         to="/orders"

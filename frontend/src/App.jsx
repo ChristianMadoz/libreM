@@ -64,23 +64,27 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/posts" element={<Posts />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/admin" element={
+          <PrivateRoute requireAdmin={true}><Admin /></PrivateRoute>
+        } />
+        <Route path="/admin/reports" element={
+          <PrivateRoute requireAdmin={true}><AdminReports /></PrivateRoute>
+        } />
 
         {/* CRM Routes - All Protected */}
         <Route path="/crm/auth" element={<AuthPage />} />
         <Route path="/crm" element={
-          <PrivateRoute redirectTo="/crm/auth">
+          <PrivateRoute redirectTo="/crm/auth" requireAdmin={true}>
             <CRMLayout />
           </PrivateRoute>
         }>
           <Route index element={<DealsPage />} />
           <Route path="deals/:id" element={<DealDetailPage />} />
           <Route path="contacts" element={
-            <PrivateRoute><ContactsPage /></PrivateRoute>
+            <PrivateRoute requireAdmin={true}><ContactsPage /></PrivateRoute>
           } />
           <Route path="companies" element={
-            <PrivateRoute><CompaniesPage /></PrivateRoute>
+            <PrivateRoute requireAdmin={true}><CompaniesPage /></PrivateRoute>
           } />
         </Route>
       </Routes>

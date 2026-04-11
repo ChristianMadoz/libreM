@@ -166,6 +166,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    role: user?.role || 'user',
+    isAdmin: user?.role === 'admin',
     loading,
     isAuthenticated,
     awaitingVerification,
