@@ -41,17 +41,6 @@ async function checkTables() {
             }
         }
 
-        console.log('\n\n📋 Verificando tablas de CRM:\n');
-        const crmTables = ['companies', 'contacts', 'deals'];
-        
-        for (const table of crmTables) {
-            try {
-                const countResult = await client.query(`SELECT COUNT(*) FROM ${table}`);
-                console.log(`  ✓ ${table}: ${countResult.rows[0].count} registros`);
-            } catch (err) {
-                console.log(`  ✗ ${table}: NO EXISTE - ${err.message}`);
-            }
-        }
 
     } catch (err) {
         console.error('❌ Error:', err.message);

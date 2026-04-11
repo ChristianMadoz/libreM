@@ -1,6 +1,6 @@
 import React from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './App.css';
 import Header from './components/Header';
@@ -23,21 +23,12 @@ import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
-// CRM Imports
-import { AuthPage } from './pages/crm/AuthPage';
-import { DealsPage } from './pages/crm/DealsPage';
-import { DealDetailPage } from './pages/crm/DealDetailPage';
-import { ContactsPage } from './pages/crm/ContactsPage';
-import { CompaniesPage } from './pages/crm/CompaniesPage';
-import { CRMLayout } from './components/crm/CRMLayout';
 
 function AppContent() {
-  const location = useLocation();
-  const isCRM = location.pathname.startsWith('/crm');
 
   return (
     <>
-      {!isCRM && <Header />}
+      <Header />
       <Routes>
         {/* E-commerce Routes */}
         <Route path="/" element={<Home />} />
@@ -71,22 +62,6 @@ function AppContent() {
           <PrivateRoute requireAdmin={true}><AdminReports /></PrivateRoute>
         } />
 
-        {/* CRM Routes - All Protected */}
-        <Route path="/crm/auth" element={<AuthPage />} />
-        <Route path="/crm" element={
-          <PrivateRoute redirectTo="/crm/auth" requireAdmin={true}>
-            <CRMLayout />
-          </PrivateRoute>
-        }>
-          <Route index element={<DealsPage />} />
-          <Route path="deals/:id" element={<DealDetailPage />} />
-          <Route path="contacts" element={
-            <PrivateRoute requireAdmin={true}><ContactsPage /></PrivateRoute>
-          } />
-          <Route path="companies" element={
-            <PrivateRoute requireAdmin={true}><CompaniesPage /></PrivateRoute>
-          } />
-        </Route>
       </Routes>
       <Toaster />
       <SpeedInsights />
