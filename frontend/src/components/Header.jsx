@@ -15,7 +15,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [categories, setCategories] = useState([]);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { cart, favorites, getCartItemsCount } = useCart();
 
   useEffect(() => {
