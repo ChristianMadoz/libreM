@@ -18,6 +18,8 @@ const Header = () => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { cart, favorites, getCartItemsCount } = useCart();
 
+  console.log('[Header] Auth State:', { user, isAuthenticated, isAdmin });
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
